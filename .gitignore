@@ -14,3 +14,6 @@ mobile/dist/
 
 # Shared build output
 shared/dist/
+
+# TypeScript build cache
+*.tsbuildinfo
