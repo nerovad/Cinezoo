@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import "./AdminFestivals.scss";
 import ChannelCreator from "../Admin/ChannelCreator";
 import ChannelList from "../Admin/ChannelList";

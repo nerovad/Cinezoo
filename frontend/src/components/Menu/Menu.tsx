@@ -262,9 +262,9 @@ const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = fal
   const { channelId } = useChatStore(); // assumes store has { channelId }
   const [films, setFilms] = useState<Film[]>([]);
   const [idx, setIdx] = useState(0);
-  const [eventType, setEventType] = useState<string | null>(null);
+  const [, setEventType] = useState<string | null>(null);
   const [channelWidgets, setChannelWidgets] = useState<Array<{type: string, order: number}>>([]);
-  const [channelData, setChannelData] = useState<any>(null);
+  const [, setChannelData] = useState<any>(null);
 
   useEffect(() => {
     if (activeModal === "ballot") setView("grid");
@@ -496,14 +496,6 @@ const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = fal
       >
         <TournamentBracket
           channelId={channelId}
-          onFilmClick={(filmId) => {
-            // Find the film and open voting modal
-            const film = films.find(f => f.id === filmId);
-            if (film) {
-              setIdx(films.indexOf(film));
-              setActiveModal("ballot");
-            }
-          }}
         />
       </Modal>
 

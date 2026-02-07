@@ -14,7 +14,6 @@ import Settings from "./components/Settings/Settings.tsx";
 import Upload from "./components/Upload/Upload.tsx";
 import Profile from "./components/Profile/Profile.tsx";
 import AdminFestivals from "./components/Pages/AdminFestivals.tsx";
-import CreateChannelForm from "./components/Channel/CreateChannelForm";
 import "./App.scss";
 
 const MainLayout: React.FC<{
@@ -25,9 +24,7 @@ const MainLayout: React.FC<{
   isGuideOpen: boolean;
   setIsGuideOpen: React.Dispatch<React.SetStateAction<boolean>>;
   videoControls: any;
-  isAuthOpen: boolean;
   setIsAuthOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  authMode: "login" | "register";
   setAuthMode: React.Dispatch<React.SetStateAction<"login" | "register">>;
   channelSlug?: string;
   isMobile: boolean;
@@ -39,9 +36,7 @@ const MainLayout: React.FC<{
   isGuideOpen,
   setIsGuideOpen,
   videoControls,
-  isAuthOpen,
   setIsAuthOpen,
-  authMode,
   setAuthMode,
   channelSlug,
   isMobile
@@ -62,7 +57,6 @@ const MainLayout: React.FC<{
         <VideoPlayer
           isMenuOpen={isMenuOpen}
           isChatOpen={isChatOpen}
-          setIsGuideOpen={setIsGuideOpen}
           setVideoControls={videoControls.setVideoControls}
           channelSlug={channelSlug} // ✅ Pass channel slug to VideoPlayer
           isMobile={isMobile}
@@ -115,7 +109,7 @@ const App: React.FC = () => {
     toggleMute: () => { },
     toggleFullscreen: () => { },
     loadVideo: () => { },
-    setVideoControls: (controls: any) => setVideoControls((prev) => ({ ...prev, ...controls })),
+    setVideoControls: (controls: any) => setVideoControls((prev: any) => ({ ...prev, ...controls })),
   });
 
   return (
@@ -136,9 +130,7 @@ const App: React.FC = () => {
                 setIsChatOpen={setIsChatOpen}
                 isGuideOpen={isGuideOpen}
                 setIsGuideOpen={setIsGuideOpen}
-                isAuthOpen={isAuthOpen}
                 setIsAuthOpen={setIsAuthOpen}
-                authMode={authMode}
                 setAuthMode={setAuthMode}
                 videoControls={videoControls}
                 channelSlug={undefined}

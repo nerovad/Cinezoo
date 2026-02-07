@@ -294,8 +294,6 @@ const TournamentBracket: React.FC<Props> = ({ channelId }) => {
                   votingWindow?.isActive &&
                   votingWindow.currentRound === matchup.roundNumber &&
                   !matchup.winner;
-                const userVoted = !!userVotes[matchup.dbMatchupId || matchup.id];
-
                 return (
                   <div key={matchup.id} className="matchup">
                     {/* Film 1 */}

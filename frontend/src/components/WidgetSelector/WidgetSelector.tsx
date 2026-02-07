@@ -1,7 +1,7 @@
 import React from 'react';
 import './WidgetSelector.scss';
 
-type WidgetType =
+export type WidgetType =
   | 'voting_ballot'
   | 'leaderboard'
   | 'battle_royale'
@@ -9,7 +9,7 @@ type WidgetType =
   | 'about'
   | 'now_playing';
 
-interface WidgetConfig {
+export interface WidgetConfig {
   type: WidgetType;
   order: number;
 }

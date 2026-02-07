@@ -101,7 +101,7 @@ const NowPlayingWidget: React.FC<Props> = ({ channelId }) => {
         <div className="up-next-section">
           <h3>⏭️ Up Next</h3>
           <div className="schedule-list">
-            {data.up_next.map((item, index) => (
+            {data.up_next.map((item) => (
               <div key={item.is_recurring_instance ? `${item.original_id}-${item.scheduled_at}` : item.id} className="schedule-item">
                 <div className="item-time">{formatTime(item.scheduled_at)}</div>
                 <div className="item-info">

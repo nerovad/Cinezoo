@@ -51,7 +51,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
   const { setChannelId } = useChatStore();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [channelName, setChannelName] = useState("");
-  const [isMuted, setIsMuted] = useState(true);
+  const [, setIsMuted] = useState(true);
   const [showMuteIcon, setShowMuteIcon] = useState(true);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [videoLinks, setVideoLinks] = useState<VideoLink[]>([
@@ -122,6 +122,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     }
 
     if (Hls.isSupported()) {
+      // @ts-expect-error hls.js types don't match runtime API for config
       const hls = new Hls({
         liveBackBufferLength: 0,
         backBufferLength: 0,

@@ -29,29 +29,11 @@ type Channel = {
   session_id?: string;
 };
 
-type Film = {
-  id: string;
-  title: string;
-  thumbnail?: string;
-  duration?: string;
-  synopsis?: string;
-  url?: string;
-  provider?: string;
-};
-
 type Award = {
   id: string;
   name: string;
   year?: number | string;
   work?: string;
-  position?: number;
-};
-
-type Company = {
-  id: string;
-  name: string;
-  role?: string;
-  website?: string;
   position?: number;
 };
 
@@ -98,7 +80,7 @@ const Profile: React.FC = () => {
 
   const [profile, setProfile] = useState<ProfileData>(DEFAULT_PROFILE);
   const [channels, setChannels] = useState<Channel[]>([]);
-  const [awards, setAwards] = useState<Award[]>([]);
+  const [, setAwards] = useState<Award[]>([]);
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
@@ -162,7 +144,7 @@ const Profile: React.FC = () => {
       setLoading(true);
       try {
         // Load all profile data
-        const [profileData, filmsData, awardsData, companiesData] = await Promise.all([
+        const [profileData, , awardsData] = await Promise.all([
           api.get("/api/profile/me", DEFAULT_PROFILE),
           api.get("/api/films/mine", []),
           api.get("/api/awards/mine", []),

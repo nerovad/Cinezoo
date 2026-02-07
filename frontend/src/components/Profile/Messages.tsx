@@ -98,7 +98,7 @@ const Messages: React.FC = () => {
         content: newMessage.trim(),
       });
 
-      setMessages((prev) => [...prev, message]);
+      setMessages((prev) => [...prev, message as Message]);
       setNewMessage("");
       loadConversations(); // Refresh conversation list
     } catch (error) {

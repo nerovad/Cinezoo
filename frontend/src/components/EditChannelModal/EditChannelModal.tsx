@@ -1,6 +1,7 @@
 // src/components/EditChannelModal/EditChannelModal.tsx
 import React, { useEffect, useRef, useState } from "react";
 import WidgetSelector from "../WidgetSelector/WidgetSelector";
+import type { WidgetConfig } from "../WidgetSelector/WidgetSelector";
 import "./EditChannelModal.scss";
 
 interface Props {
@@ -17,7 +18,7 @@ type Channel = {
   channel_number?: number;
   slug?: string;
   description?: string;
-  widgets?: Array<{type: string, order: number}>;
+  widgets?: WidgetConfig[];
   about_text?: string;
   first_live_at?: string | null;
 };
@@ -128,7 +129,7 @@ const EditChannelModal: React.FC<Props> = ({ isOpen, onClose, channel, onUpdate 
   const [submitting, setSubmitting] = useState(false);
 
   // Widgets
-  const [selectedWidgets, setSelectedWidgets] = useState<Array<{type: string, order: number}>>([]);
+  const [selectedWidgets, setSelectedWidgets] = useState<WidgetConfig[]>([]);
   const [aboutText, setAboutText] = useState("");
 
   // Event/festival
@@ -148,7 +149,6 @@ const EditChannelModal: React.FC<Props> = ({ isOpen, onClose, channel, onUpdate 
 
   // Schedule management
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
-  const [showScheduleEditor, setShowScheduleEditor] = useState(false);
   const [channelFilms, setChannelFilms] = useState<any[]>([]);
 
   // Load channel data when modal opens
