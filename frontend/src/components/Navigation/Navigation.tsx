@@ -3,9 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { FaUserCircle, FaBars } from "react-icons/fa";
 import Logo from "../../assets/cinezoo_logo_neon_7.svg";
 import "./Navigation.scss";
-import UpArrow from "../../assets/up_arrow_icon.svg"
-import DownArrow from "../../assets/down_arrow.svg"
-import TvGuide from "../../assets/tv_guide_icon.svg"
+import ChannelArrow from "../../assets/down_arrow_02_13.svg"
+import TvGuide from "../../assets/tv_guide_icon_02_13.svg"
 import Fullscreen from "../../assets/fullscreen_icon.svg"
 import Mute from "../../assets/mute_icon.svg"
 import { useChatStore } from "../../store/useChatStore";
@@ -249,72 +248,84 @@ const SearchNavBar: React.FC<NavBarProps> = ({
         </div>
       )}
 
-      {/* Center Controls */}
+      {/* Center Controls — Pill Bar */}
       <div className="search-navbar__center">
-        <button className="channel-button" onClick={goToPreviousVideo}>
-          <img src={DownArrow} alt="Previous Channel" className="channel-arrow-icon" />
-        </button>
-        <button className="channel-button" onClick={goToNextVideo}>
-          <img src={UpArrow} alt="Next Channel" className="channel-arrow-icon" />
-        </button>
+        <div className="control-pill">
+          <div className="control-pill__group">
+            <button className="channel-button" onClick={goToPreviousVideo}>
+              <img src={ChannelArrow} alt="Previous Channel" className="channel-arrow-icon" />
+            </button>
+            <button className="channel-button channel-button--up" onClick={goToNextVideo}>
+              <img src={ChannelArrow} alt="Next Channel" className="channel-arrow-icon" />
+            </button>
+          </div>
 
-        {/* Hide TV Guide button on mobile - accessible from menu */}
-        {!isMobile && (
-          <button
-            className="search-navbar__tv-guide-button"
-            onClick={(e) => { e.preventDefault(); setIsGuideOpen?.((prev) => !prev); }}
-          >
-            <img src={TvGuide} alt="TV Guide" />
-          </button>
-        )}
-
-        {/* Search bar - shown on all screen sizes */}
-        <div className="search-navbar__channel-input-container" ref={searchContainerRef}>
-          <input
-            type="text"
-            value={channelInput}
-            onChange={handleInputChange}
-            onFocus={handleInputFocus}
-            onBlur={handleInputBlur}
-            placeholder={isSearchFocused ? "" : placeholderText}
-            className="channel-input"
-            onKeyDown={handleKeyDown}
-          />
-          <button className="channel-go-button" onClick={goToChannel}>
-            Go
-          </button>
-
-          {showSearchDropdown && searchResults.length > 0 && (
-            <div className="search-dropdown">
-              {searchResults.map(({ channel, matchType, matchedTag }, index) => (
-                <div
-                  key={channel.channel}
-                  className={`search-dropdown__item ${index === selectedResultIndex ? 'search-dropdown__item--selected' : ''}`}
-                  onClick={() => selectChannel(channel)}
-                  onMouseEnter={() => setSelectedResultIndex(index)}
+          {!isMobile && (
+            <>
+              <span className="control-pill__divider" />
+              <div className="control-pill__group">
+                <button
+                  className="search-navbar__tv-guide-button"
+                  onClick={(e) => { e.preventDefault(); setIsGuideOpen?.((prev) => !prev); }}
                 >
-                  <span className="search-dropdown__channel-number">{channel.channelNumber}</span>
-                  <span className="search-dropdown__channel-name">
-                    {channel.displayName || channel.channel}
-                  </span>
-                  {matchType === 'tag' && matchedTag && (
-                    <span className="search-dropdown__tag">#{matchedTag}</span>
-                  )}
-                </div>
-              ))}
-            </div>
+                  <img src={TvGuide} alt="TV Guide" />
+                </button>
+              </div>
+            </>
           )}
+
+          <span className="control-pill__divider" />
+
+          <div className="control-pill__group control-pill__group--search">
+            <div className="search-navbar__channel-input-container" ref={searchContainerRef}>
+              <input
+                type="text"
+                value={channelInput}
+                onChange={handleInputChange}
+                onFocus={handleInputFocus}
+                onBlur={handleInputBlur}
+                placeholder={isSearchFocused ? "" : placeholderText}
+                className="channel-input"
+                onKeyDown={handleKeyDown}
+              />
+              <button className="channel-go-button" onClick={goToChannel}>
+                Go
+              </button>
+
+              {showSearchDropdown && searchResults.length > 0 && (
+                <div className="search-dropdown">
+                  {searchResults.map(({ channel, matchType, matchedTag }, index) => (
+                    <div
+                      key={channel.channel}
+                      className={`search-dropdown__item ${index === selectedResultIndex ? 'search-dropdown__item--selected' : ''}`}
+                      onClick={() => selectChannel(channel)}
+                      onMouseEnter={() => setSelectedResultIndex(index)}
+                    >
+                      <span className="search-dropdown__channel-number">{channel.channelNumber}</span>
+                      <span className="search-dropdown__channel-name">
+                        {channel.displayName || channel.channel}
+                      </span>
+                      {matchType === 'tag' && matchedTag && (
+                        <span className="search-dropdown__tag">#{matchedTag}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <span className="control-pill__divider" />
+
+          <div className="control-pill__group">
+            <button className="mute-button" onClick={toggleMute}>
+              <img src={Mute} alt="Mute" />
+            </button>
+            <button className="fullscreen-button" onClick={toggleFullscreen}>
+              <img src={Fullscreen} alt="Fullscreen" />
+            </button>
+          </div>
         </div>
-
-        {/* Mute Button */}
-        <button className="mute-button" onClick={toggleMute}>
-          <img src={Mute} alt="Mute" />
-        </button>
-
-        {/* Fullscreen Button */}
-        <button className="fullscreen-button" onClick={toggleFullscreen}>
-          <img src={Fullscreen} alt="Fullscreen" />
-        </button>
       </div>
 
       {/* Right Links & Profile/Login */}
