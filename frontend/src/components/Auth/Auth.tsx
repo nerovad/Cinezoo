@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import TermsOfService from "./TermsOfService";
 import { useAuth } from "../../store/AuthContext";
+import { API_BASE_URL } from "../../config";
 import "./Auth.scss";
 
 interface AuthProps {
@@ -50,7 +51,7 @@ const Auth: React.FC<AuthProps> = ({ setIsAuthOpen, authMode, setAuthMode }) => 
         }
       } else {
         // Registration - keep existing flow
-        const res = await fetch("http://localhost:4000/api/auth/register", {
+        const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, username, password }),

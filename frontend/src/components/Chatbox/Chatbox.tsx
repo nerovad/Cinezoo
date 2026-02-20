@@ -4,8 +4,9 @@ import "./Chatbox.scss";
 import FastForwardIcon from "../../assets/fast_forward_icon.svg";
 import { useChatStore } from "../../store/useChatStore";
 import { getUsernameColor } from "../../utils/getUsernameColor";
+import { API_BASE_URL, SOCKET_URL } from "../../config";
 
-const socket = io("http://localhost:4000", {
+const socket = io(SOCKET_URL, {
   withCredentials: true,
   transports: ["websocket"],
 });
@@ -28,7 +29,7 @@ const Chatbox: React.FC<ChatboxProps> = ({ isOpen, setIsOpen }) => {
       return;
     }
     console.log("🔑 Fetching user profile with token...");
-    fetch("http://localhost:4000/api/profile/me", {
+    fetch(`${API_BASE_URL}/api/profile/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => {
