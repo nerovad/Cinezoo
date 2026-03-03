@@ -11,7 +11,7 @@ import directMessageRoutes from "./routes/directMessageRoutes";
 import voteRoutes from "./routes/voteRoutes";
 import profileRoutes from "./routes/profileRoutes";
 import errorHandler from "./middleware/errorHandler"; // ✅ fixed
-import pool from "../db/pool";
+import pool from "./db/pool";
 import channelRoutes from "./routes/channelRoutes";
 import festivalRoutes from "./routes/festivalRoutes";
 import filmRoutes from "./routes/filmRoutes";

@@ -1,7 +1,7 @@
 // src/controllers/filmController.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import pool from "../../db/pool";
+import pool from "../db/pool";
 
 /* ========================= Helpers ========================= */
 

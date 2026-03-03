@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import pool from "../../db/pool";
+import pool from "../db/pool";
 
 
 export const getMessages = async (req: Request, res: Response) => {

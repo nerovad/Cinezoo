@@ -1,7 +1,7 @@
 // tournamentVotingController.ts
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/authMiddleware';
-import pool from '../../db/pool';
+import pool from '../db/pool';
 
 interface VotingWindow {
   isActive: boolean;

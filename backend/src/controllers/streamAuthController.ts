@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import pool from "../../db/pool";
+import pool from "../db/pool";
 
 export const verifyStreamKey = async (
   req: Request,

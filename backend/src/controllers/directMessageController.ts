@@ -1,5 +1,5 @@
 import { Response } from "express";
-import pool from "../../db/pool";
+import pool from "../db/pool";
 import { AuthRequest } from "../middleware/authMiddleware";
 
 export async function getConversations(req: AuthRequest, res: Response): Promise<void> {

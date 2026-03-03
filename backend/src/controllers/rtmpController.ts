@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import pool from "../../db/pool";
+import pool from "../db/pool";
 
 /**
  * nginx-rtmp on_publish auth hook.

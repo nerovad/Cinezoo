@@ -3,7 +3,7 @@ import express, { Request, Response, NextFunction } from "express";
 import { body, validationResult } from "express-validator";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import pool from "../../db/pool"; // ✅ default import
+import pool from "../db/pool"; // ✅ default import
 
 const router = express.Router();
 

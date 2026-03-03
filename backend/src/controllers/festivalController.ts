@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import pool from "../../db/pool";
+import pool from "../db/pool";
 
 /** Create a session (festival) for a channel */
 export async function createSession(req: Request, res: Response, next: NextFunction): Promise<void> {

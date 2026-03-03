@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { validationResult } from "express-validator";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import pool from "../../db/pool";
+import pool from "../db/pool";
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {

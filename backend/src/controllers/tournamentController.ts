@@ -1,6 +1,6 @@
 // tournamentController.ts
 import { Request, Response } from "express";
-import pool from "../../db/pool";
+import pool from "../db/pool";
 import { AuthRequest } from "../middleware/authMiddleware";
 
 /**

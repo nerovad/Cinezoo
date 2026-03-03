@@ -1,6 +1,6 @@
 // src/controllers/profileController.ts
 import { Response } from "express";
-import pool from "../../db/pool";
+import pool from "../db/pool";
 import { AuthRequest } from "../middleware/authMiddleware";
 
 export async function getProfile(req: AuthRequest, res: Response): Promise<void> {
