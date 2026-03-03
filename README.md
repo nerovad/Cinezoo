@@ -33,3 +33,9 @@ npm install
 Start in development mode (with auto-reload)
 
 npx ts-node-dev src/server.ts
+
+"scripts": {
+  "dev": "ts-node-dev src/server.ts",
+  "build": "tsc",
+  "start": "node dist/server.js"
+}
