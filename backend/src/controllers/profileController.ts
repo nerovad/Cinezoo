@@ -8,7 +8,7 @@ export async function getProfile(req: AuthRequest, res: Response): Promise<void>
     const userId = req.userId;
 
     // Get user basic info
-    const userQuery = `SELECT id, username, email FROM users WHERE id = $1`;
+    const userQuery = `SELECT id, username, email, user_group FROM users WHERE id = $1`;
     const userResult = await pool.query(userQuery, [userId]);
 
     if (userResult.rows.length === 0) {
@@ -43,6 +43,7 @@ export async function getProfile(req: AuthRequest, res: Response): Promise<void>
       id: user.id.toString(),
       handle: profile.handle || `@${user.username}`,
       displayName: profile.handle || `@${user.username}`, // Use @username as display name
+      userGroup: user.user_group || 'general_user',
       bannerUrl: profile.banner_url,
       avatarUrl: profile.avatar_url,
       bio: profile.bio,

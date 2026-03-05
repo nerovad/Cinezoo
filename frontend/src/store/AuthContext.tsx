@@ -1,10 +1,13 @@
 // src/store/AuthContext.tsx - Fixed Version
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+export type UserGroup = 'super_admin' | 'network' | 'general_user';
+
 interface User {
   id: number;
   username: string;
   email: string;
+  userGroup: UserGroup;
 }
 
 interface AuthContextType {
@@ -59,7 +62,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser({
           id: parseInt(profileData.id),
           username: profileData.handle?.replace('@', '') || 'user',
-          email: 'user@example.com'
+          email: 'user@example.com',
+          userGroup: profileData.userGroup || 'general_user'
         });
       } else {
         console.log('AuthContext: Token invalid, clearing storage'); // Debug

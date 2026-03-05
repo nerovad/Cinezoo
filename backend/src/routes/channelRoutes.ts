@@ -11,7 +11,7 @@ import {
   updateChannelSchedule,
 } from "../controllers/channelController";
 import { listFilmsForChannel } from "../controllers/filmController";
-import { authenticateToken, AuthRequest } from "../middleware/authMiddleware";
+import { authenticateToken, requireGroup, AuthRequest } from "../middleware/authMiddleware";
 
 const router = express.Router();
 
@@ -20,8 +20,8 @@ router.get("/mine", authenticateToken, (req: AuthRequest, res: Response, next: N
   getMyChannels(req, res).catch(next);
 });
 
-// POST /api/channels
-router.post("/", (req: Request, res: Response, next: NextFunction) => {
+// POST /api/channels - requires super_admin or network group
+router.post("/", authenticateToken, requireGroup('super_admin', 'network'), (req: Request, res: Response, next: NextFunction) => {
   createChannel(req, res, next);
 });
 

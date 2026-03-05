@@ -20,6 +20,7 @@ import rtmpRoutes from "./routes/rtmpRoutes";
 import awardRoutes from "./routes/awardRoutes";
 import companyRoutes from "./routes/companyRoutes";
 import tournamentRoutes from "./routes/tournamentRoutes";
+import adminRoutes from "./routes/adminRoutes";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
@@ -57,6 +58,7 @@ app.use("/api/awards", awardRoutes);
 app.use("/api/companies", companyRoutes);
 app.use("/api", tournamentRoutes);
 app.use("/api/rtmp", rtmpRoutes);
+app.use("/api/admin", adminRoutes);
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cors());

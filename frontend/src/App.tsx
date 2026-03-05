@@ -14,6 +14,7 @@ import Settings from "./components/Settings/Settings.tsx";
 import Upload from "./components/Upload/Upload.tsx";
 import Profile from "./components/Profile/Profile.tsx";
 import AdminFestivals from "./components/Pages/AdminFestivals.tsx";
+import Admin from "./components/Pages/Admin.tsx";
 import "./App.scss";
 
 const MainLayout: React.FC<{
@@ -143,6 +144,7 @@ const App: React.FC = () => {
           <Route path="/upload" element={<Upload />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="/admin/festivals" element={<AdminFestivals />} />
 
           {/* Catch-all redirect */}

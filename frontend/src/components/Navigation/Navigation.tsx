@@ -346,6 +346,9 @@ const SearchNavBar: React.FC<NavBarProps> = ({
             {showProfileDropdown && (
               <div className="profile-dropdown" onClick={(e) => e.stopPropagation()}>
                 <Link to="/profile" className="profile-dropdown__item">My Space</Link>
+                {user?.userGroup === 'super_admin' && (
+                  <Link to="/admin" className="profile-dropdown__item">Admin</Link>
+                )}
                 <button onClick={handleLogout} className="profile-dropdown__logout">Log out</button>
               </div>
             )}
