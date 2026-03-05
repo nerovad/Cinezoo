@@ -34,7 +34,7 @@ interface VideoPlayerProps {
   isMobile?: boolean;
 }
 
-const HLS_BASE = "https://dainbramage.tv:8088";
+const HLS_BASE = "https://cinezoo.tv:8088";
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVideoControls, isMobile = false }) => {
   const { channelSlug } = useParams<{ channelSlug: string }>();

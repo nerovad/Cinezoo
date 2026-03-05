@@ -39,3 +39,6 @@ npx ts-node-dev src/server.ts
   "build": "tsc",
   "start": "node dist/server.js"
 }
+
+PROD: Start prod with ./deploy.sh
+PM2 is configured to auto-start on reboot via systemd

@@ -643,14 +643,14 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
         {channelInfo && (
           <div className="channel-details">
             <p><strong>Stream Key:</strong> {channelInfo.stream_key}</p>
-            <p><strong>Ingest URL for OBS:</strong> rtmp://dainbramage.tv/live/{channelInfo.stream_key}</p>
+            <p><strong>Ingest URL for OBS:</strong> rtmp://cinezoo.tv/live/{channelInfo.stream_key}</p>
             <p><strong>Playback URL (HLS):</strong> {channelInfo.playback_path}</p>
 
             <div className="channel-actions">
               <button onClick={() => navigator.clipboard.writeText(channelInfo.stream_key)}>
                 Copy Stream Key
               </button>
-              <button onClick={() => navigator.clipboard.writeText(`rtmp://dainbramage.tv/live/${channelInfo.stream_key}`)}>
+              <button onClick={() => navigator.clipboard.writeText(`rtmp://cinezoo.tv/live/${channelInfo.stream_key}`)}>
                 Copy Ingest URL
               </button>
               <button onClick={() => navigator.clipboard.writeText(channelInfo.playback_path)}>
