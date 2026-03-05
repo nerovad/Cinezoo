@@ -17,3 +17,6 @@ shared/dist/
 
 # TypeScript build cache
 *.tsbuildinfo
+
+streaming/
+videos/
