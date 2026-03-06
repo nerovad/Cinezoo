@@ -13,7 +13,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (emailOrUsername: string, password: string) => Promise<boolean>;
   register: (email: string, username: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
@@ -79,15 +79,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (emailOrUsername: string, password: string): Promise<boolean> => {
     try {
-      // Use your existing login endpoint
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: emailOrUsername, username: emailOrUsername, password }),
       });
 
       if (response.ok) {

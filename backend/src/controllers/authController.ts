@@ -45,8 +45,8 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
 
     const result = await pool.query(
-      "SELECT * FROM users WHERE email = COALESCE($1, email) OR username = COALESCE($2, username) LIMIT 1",
-      [email, username]
+      "SELECT * FROM users WHERE email = $1 OR username = $2 LIMIT 1",
+      [email || null, username || null]
     );
 
 

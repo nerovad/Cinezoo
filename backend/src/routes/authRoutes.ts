@@ -58,12 +58,12 @@ router.post(
 
       if (!email && !username) {
         res.status(400).json({ error: "Email or Username is required" });
-        return; // ✅
+        return;
       }
 
       const result = await pool.query(
-        "SELECT * FROM users WHERE email = COALESCE($1, email) OR username = COALESCE($2, username) LIMIT 1",
-        [email, username]
+        "SELECT * FROM users WHERE email = $1 OR username = $2 LIMIT 1",
+        [email || null, username || null]
       );
 
       const user = result.rows[0];

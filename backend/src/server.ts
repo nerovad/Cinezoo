@@ -15,7 +15,6 @@ import pool from "./db/pool";
 import channelRoutes from "./routes/channelRoutes";
 import festivalRoutes from "./routes/festivalRoutes";
 import filmRoutes from "./routes/filmRoutes";
-import bodyParser from "body-parser";
 import rtmpRoutes from "./routes/rtmpRoutes";
 import awardRoutes from "./routes/awardRoutes";
 import companyRoutes from "./routes/companyRoutes";
@@ -39,7 +38,10 @@ const PORT = process.env.PORT || 4000;
 
 // Middleware
 app.use(express.json({ limit: '10mb' })); // Increased limit for base64 images
-app.use(cors());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:5173"],
+  credentials: true,
+}));
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -59,9 +61,6 @@ app.use("/api/companies", companyRoutes);
 app.use("/api", tournamentRoutes);
 app.use("/api/rtmp", rtmpRoutes);
 app.use("/api/admin", adminRoutes);
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(express.json());
-app.use(cors());
 
 // Error Handler
 app.use(errorHandler);
