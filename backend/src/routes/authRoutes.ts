@@ -33,7 +33,17 @@ router.post(
 
       res.status(201).json({ message: "User created successfully", user: result.rows[0] });
       return; // ✅
-    } catch (error) {
+    } catch (error: any) {
+      if (error.code === '23505') {
+        if (error.constraint === 'users_email_key') {
+          res.status(400).json({ error: "Email already in use" });
+          return;
+        }
+        if (error.constraint === 'users_username_key') {
+          res.status(400).json({ error: "Username already taken" });
+          return;
+        }
+      }
       next(error);
     }
   }
