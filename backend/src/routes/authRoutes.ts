@@ -3,6 +3,8 @@ import express, { Request, Response, NextFunction } from "express";
 import { body, validationResult } from "express-validator";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import nodemailer from "nodemailer";
 import pool from "../db/pool"; // ✅ default import
 
 const router = express.Router();
@@ -81,6 +83,69 @@ router.post(
       const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: "1h" });
       res.json({ token });
       return; // ✅
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// POST /api/auth/forgot-password
+router.post(
+  "/forgot-password",
+  [body("email").isEmail().withMessage("Enter a valid email")],
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { email } = req.body;
+
+      const result = await pool.query(
+        "SELECT id, email FROM users WHERE email = $1 LIMIT 1",
+        [email]
+      );
+
+      // Always return success to avoid leaking whether the email exists
+      if (result.rows.length === 0) {
+        res.json({ message: "If that email is registered, a temporary password has been sent." });
+        return;
+      }
+
+      const user = result.rows[0];
+
+      // Generate a random temporary password
+      const tempPassword = crypto.randomBytes(8).toString("hex");
+      const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+      await pool.query("UPDATE users SET password = $1 WHERE id = $2", [
+        hashedPassword,
+        user.id,
+      ]);
+
+      // Send email
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: Number(process.env.SMTP_PORT) === 465,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: user.email,
+        subject: "Cinezoo - Temporary Password",
+        text: `Your temporary password is: ${tempPassword}\n\nPlease log in and change your password immediately.`,
+        html: `<p>Your temporary password is: <strong>${tempPassword}</strong></p><p>Please log in and change your password immediately.</p>`,
+      });
+
+      res.json({ message: "If that email is registered, a temporary password has been sent." });
+      return;
     } catch (error) {
       next(error);
     }
