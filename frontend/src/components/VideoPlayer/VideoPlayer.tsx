@@ -105,7 +105,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     endedListenerRef.current = () => v.removeEventListener("ended", onEnded);
   };
 
-  const loadVideo = useCallback((src: string) => {
+  const loadVideo = useCallback(async (src: string) => {
     console.log("[loadVideo] Loading:", src);
     const v = videoRef.current;
     if (!v) {
@@ -123,6 +123,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
       v.muted = true;
       v.play().catch(() => { });
       return;
+    }
+
+    // Pre-check if the HLS manifest exists before creating an HLS instance
+    if (src.includes(".m3u8")) {
+      try {
+        const res = await fetch(src, { method: "HEAD" });
+        if (!res.ok) {
+          console.log("[loadVideo] Stream offline (HTTP", res.status, "), showing intermission");
+          setShowIntermission(true);
+          return;
+        }
+      } catch {
+        console.log("[loadVideo] Stream unreachable, showing intermission");
+        setShowIntermission(true);
+        return;
+      }
     }
 
     if (Hls.isSupported()) {
@@ -155,8 +171,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
             retryRef.current += 1;
             (hls as any).startLoad?.();
           } else {
-            // Stream is offline - show intermission screen
-            console.log("[VideoPlayer] Stream offline, showing intermission");
+            console.log("[VideoPlayer] Stream offline after retries, showing intermission");
             setShowIntermission(true);
           }
         } else if (type === "mediaError") {
