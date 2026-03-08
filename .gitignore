@@ -12,6 +12,8 @@ mobile/dist/
 *.mobileprovision
 *.orig.*
 
+*.mp4
+
 # Shared build output
 shared/dist/
 

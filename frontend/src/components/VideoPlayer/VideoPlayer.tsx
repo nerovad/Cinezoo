@@ -5,7 +5,7 @@ import "./VideoPlayer.scss";
 import Chatbox from "../Chatbox/Chatbox";
 import "../../styles/_variables.scss";
 import muteIcon from "../../assets/mute_icon.svg";
-import intermissionDefault from "../../assets/intermission_default.svg";
+import intermissionDefault from "../../assets/intermission.mp4";
 import { useChatStore } from "../../store/useChatStore";
 
 interface VideoLink {
@@ -405,7 +405,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
         />
         {showIntermission && (
           <div className="intermission-screen">
-            <img src={intermissionSrc} alt="Intermission - We'll be right back" className="intermission-image" />
+            <video
+              src={intermissionSrc}
+              className="intermission-video"
+              autoPlay
+              loop
+              playsInline
+            />
           </div>
         )}
         <div className="db-originals-next-button" onClick={goToNextVideo}>
