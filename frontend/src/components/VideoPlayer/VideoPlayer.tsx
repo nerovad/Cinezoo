@@ -140,12 +140,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
       hls.loadSource(src);
       hls.attachMedia(v);
 
-      hls.on("manifestParsed", () => {
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
         v.muted = true;
         v.play().catch(() => { });
       });
 
-      hls.on("error", (_evt: any, data: any) => {
+      hls.on(Hls.Events.ERROR, (_evt: any, data: any) => {
         const fatal = !!data?.fatal;
         const type = data?.type as string | undefined;
         if (!fatal) return;
