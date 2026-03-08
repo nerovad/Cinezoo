@@ -104,6 +104,10 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
 
+  // Intermission screen
+  const [intermissionFile, setIntermissionFile] = useState<File | null>(null);
+  const [intermissionPreview, setIntermissionPreview] = useState<string | null>(null);
+
   // Track taken channel numbers
   const [takenChannelNumbers, setTakenChannelNumbers] = useState<Set<number>>(new Set());
   const [loadingChannels, setLoadingChannels] = useState(false);
@@ -238,14 +242,35 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
     setThumbnailPreview(null);
   };
 
-  // Cleanup preview URL on unmount
+  // Intermission handlers
+  const handleIntermissionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIntermissionFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setIntermissionPreview(previewUrl);
+    }
+  };
+
+  const removeIntermission = () => {
+    if (intermissionPreview) {
+      URL.revokeObjectURL(intermissionPreview);
+    }
+    setIntermissionFile(null);
+    setIntermissionPreview(null);
+  };
+
+  // Cleanup preview URLs on unmount
   useEffect(() => {
     return () => {
       if (thumbnailPreview) {
         URL.revokeObjectURL(thumbnailPreview);
       }
+      if (intermissionPreview) {
+        URL.revokeObjectURL(intermissionPreview);
+      }
     };
-  }, [thumbnailPreview]);
+  }, [thumbnailPreview, intermissionPreview]);
 
   // Convert file to base64
   const fileToBase64 = (file: File): Promise<string> => {
@@ -282,6 +307,12 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
         thumbnailBase64 = await fileToBase64(thumbnailFile);
       }
 
+      // Convert intermission to base64 if present
+      let intermissionBase64: string | null = null;
+      if (intermissionFile) {
+        intermissionBase64 = await fileToBase64(intermissionFile);
+      }
+
       const body: any = {
         name: generateInternalName(channelNumber),
         display_name: displayName,
@@ -292,6 +323,7 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
         schedule: normalizedSchedule.length > 0 ? normalizedSchedule : null,
         tags: tags.length > 0 ? tags : null,
         thumbnail: thumbnailBase64,
+        intermission: intermissionBase64,
       };
 
       const token = localStorage.getItem("token");
@@ -322,6 +354,7 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
       setTags([]);
       setTagInput("");
       removeThumbnail();
+      removeIntermission();
       setSuccess(true);
 
       // Notify parent
@@ -455,6 +488,39 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
               </div>
             )}
             <small className="form-hint">Optional. Recommended size: 320x180 pixels</small>
+          </div>
+
+          {/* Intermission Screen Upload */}
+          <div className="row">
+            <label htmlFor="intermission-upload">Intermission Screen</label>
+            {intermissionPreview ? (
+              <div className="thumbnail-preview">
+                <img src={intermissionPreview} alt="Intermission preview" />
+                <button
+                  type="button"
+                  className="thumbnail-remove"
+                  onClick={removeIntermission}
+                  aria-label="Remove intermission screen"
+                >
+                  x
+                </button>
+              </div>
+            ) : (
+              <div className="thumbnail-upload-area">
+                <input
+                  id="intermission-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleIntermissionChange}
+                  className="thumbnail-input"
+                />
+                <label htmlFor="intermission-upload" className="thumbnail-upload-label">
+                  <span className="upload-icon">TV</span>
+                  <span>Upload custom intermission screen</span>
+                </label>
+              </div>
+            )}
+            <small className="form-hint">Optional. Shown when your channel is offline. A default screen is used if none is uploaded. Recommended: 1920x1080</small>
           </div>
 
           {/* Widget Selector - General widgets only */}

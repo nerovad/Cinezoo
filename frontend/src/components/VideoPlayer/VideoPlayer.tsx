@@ -5,6 +5,7 @@ import "./VideoPlayer.scss";
 import Chatbox from "../Chatbox/Chatbox";
 import "../../styles/_variables.scss";
 import muteIcon from "../../assets/mute_icon.svg";
+import intermissionDefault from "../../assets/intermission_default.svg";
 import { useChatStore } from "../../store/useChatStore";
 
 interface VideoLink {
@@ -14,6 +15,7 @@ interface VideoLink {
   channelNumber: number;
   displayName?: string;
   tags?: string[];
+  intermissionUrl?: string | null;
 }
 
 interface VideoPlayerProps {
@@ -53,6 +55,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
   const [channelName, setChannelName] = useState("");
   const [, setIsMuted] = useState(true);
   const [showMuteIcon, setShowMuteIcon] = useState(true);
+  const [showIntermission, setShowIntermission] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [videoLinks, setVideoLinks] = useState<VideoLink[]>([
     { src: "/videos/Color_Bars_DB_Web.mp4", channel: "channel-0", channelNumber: 0, isLive: false },
@@ -111,6 +114,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     }
 
     cleanupHls();
+    setShowIntermission(false);
 
     if (src.endsWith(".mp4")) {
       console.log("[loadVideo] Loading MP4, attaching ended listener");
@@ -151,16 +155,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
             retryRef.current += 1;
             (hls as any).startLoad?.();
           } else {
-            goToNextVideoRef.current?.();
+            // Stream is offline - show intermission screen
+            console.log("[VideoPlayer] Stream offline, showing intermission");
+            setShowIntermission(true);
           }
         } else if (type === "mediaError") {
           try {
             (hls as any).recoverMediaError?.();
           } catch {
-            goToNextVideoRef.current?.();
+            setShowIntermission(true);
           }
         } else {
-          goToNextVideoRef.current?.();
+          setShowIntermission(true);
         }
       });
 
@@ -261,6 +267,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
               channelNumber: ch.channel_number ?? 0,
               displayName: ch.display_name ?? null,
               tags: ch.tags ?? [],
+              intermissionUrl: ch.intermission_url ?? null,
               isLive: true
             };
           })
@@ -364,6 +371,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
 
   useEffect(() => () => cleanupHls(), []);
 
+  // Resolve the intermission image: custom per-channel or system default
+  const currentLink = videoLinks[currentIndex];
+  const intermissionSrc = currentLink?.intermissionUrl || intermissionDefault;
+
   return (
     <div className={`video-container-dboriginals ${getClassNames()}`}>
       <div className="tv-container">
@@ -375,7 +386,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
           preload="metadata"
           playsInline
           controls={false}
+          style={showIntermission ? { display: "none" } : undefined}
         />
+        {showIntermission && (
+          <div className="intermission-screen">
+            <img src={intermissionSrc} alt="Intermission - We'll be right back" className="intermission-image" />
+          </div>
+        )}
         <div className="db-originals-next-button" onClick={goToNextVideo}>
           <div className="channelnumber">{channelName}</div>
         </div>
@@ -383,7 +400,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
 
       <Chatbox isOpen={isChatOpen} setIsOpen={() => { }} />
 
-      {showMuteIcon && <img src={muteIcon} alt="Muted" className="mute-icon-overlay" />}
+      {showMuteIcon && !showIntermission && <img src={muteIcon} alt="Muted" className="mute-icon-overlay" />}
     </div>
   );
 };

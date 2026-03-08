@@ -45,7 +45,7 @@ function parseDurationToSeconds(s?: string): number | null {
 }
 
 // Save base64 image to uploads folder and return the URL path
-function saveBase64Image(base64Data: string, channelSlug: string): string | null {
+function saveBase64Image(base64Data: string, channelSlug: string, subfolder: string = "thumbnails"): string | null {
   if (!base64Data) return null;
 
   try {
@@ -58,7 +58,7 @@ function saveBase64Image(base64Data: string, channelSlug: string): string | null
     const buffer = Buffer.from(data, "base64");
 
     // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(__dirname, "../../uploads/thumbnails");
+    const uploadsDir = path.join(__dirname, `../../uploads/${subfolder}`);
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
@@ -71,9 +71,9 @@ function saveBase64Image(base64Data: string, channelSlug: string): string | null
     fs.writeFileSync(filepath, buffer);
 
     // Return URL path
-    return `/uploads/thumbnails/${filename}`;
+    return `/uploads/${subfolder}/${filename}`;
   } catch (err) {
-    console.error("Failed to save thumbnail:", err);
+    console.error(`Failed to save ${subfolder} image:`, err);
     return null;
   }
 }
@@ -109,6 +109,7 @@ export async function createChannel(req: Request, res: Response, next: NextFunct
       first_live_at, // When channel first went live
       tags, // Metadata tags for channel discovery
       thumbnail, // Base64 encoded thumbnail image
+      intermission, // Base64 encoded intermission screen image
       schedule, // Schedule items for Now Playing / Up Next widget
     } = req.body as {
       name: string;
@@ -140,6 +141,7 @@ export async function createChannel(req: Request, res: Response, next: NextFunct
       first_live_at?: string | null;
       tags?: string[];
       thumbnail?: string;
+      intermission?: string;
       schedule?: Array<{
         film_id?: number;
         title?: string;
@@ -205,19 +207,22 @@ export async function createChannel(req: Request, res: Response, next: NextFunct
       const playbackPath = `/hls/${streamKey}/index.m3u8`;
 
       // Save thumbnail if provided
-      const thumbnailUrl = thumbnail ? saveBase64Image(thumbnail, slug) : null;
+      const thumbnailUrl = thumbnail ? saveBase64Image(thumbnail, slug, "thumbnails") : null;
+      // Save intermission screen if provided (custom per-channel)
+      const intermissionUrl = intermission ? saveBase64Image(intermission, slug, "intermissions") : null;
 
       const chResult = await client.query(
         `insert into channels
-           (owner_id, slug, name, stream_url, stream_key, ingest_app, playback_path, display_name, channel_number, widgets, about_text, first_live_at, tags, thumbnail, created_at)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, now())
-         returning id, slug, name, stream_url, stream_key, ingest_app, playback_path, display_name, channel_number, widgets, about_text, first_live_at, tags, thumbnail, created_at`,
+           (owner_id, slug, name, stream_url, stream_key, ingest_app, playback_path, display_name, channel_number, widgets, about_text, first_live_at, tags, thumbnail, intermission_url, created_at)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, now())
+         returning id, slug, name, stream_url, stream_key, ingest_app, playback_path, display_name, channel_number, widgets, about_text, first_live_at, tags, thumbnail, intermission_url, created_at`,
         [uid, slug, name ?? slug, stream_url ?? null, streamKey, ingestApp, playbackPath, display_name ?? null, channel_number ?? null,
          widgets ? JSON.stringify(widgets) : null,
          about_text ?? null,
          first_live_at ?? null,
          tags && tags.length > 0 ? tags : null,
-         thumbnailUrl]
+         thumbnailUrl,
+         intermissionUrl]
       );
       channel = chResult.rows[0];
     }
@@ -433,7 +438,7 @@ export async function createChannel(req: Request, res: Response, next: NextFunct
 export async function listChannels(_req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { rows } = await pool.query(
-      `select id, slug, name, stream_url, stream_key, ingest_app, playback_path, channel_number, display_name, tags, created_at
+      `select id, slug, name, stream_url, stream_key, ingest_app, playback_path, channel_number, display_name, tags, intermission_url, created_at
        from channels order by created_at desc`
     );
     res.json(rows);
@@ -448,7 +453,7 @@ export async function getChannel(req: Request, res: Response, next: NextFunction
     const slug = String(req.params.slug);
     const { rows } = await pool.query(
       `select c.id, c.slug, c.name, c.stream_url, c.stream_key, c.ingest_app, c.playback_path,
-              c.display_name, c.channel_number, c.widgets, c.about_text, c.first_live_at, c.thumbnail, c.created_at,
+              c.display_name, c.channel_number, c.widgets, c.about_text, c.first_live_at, c.thumbnail, c.intermission_url, c.created_at,
               u.username as owner_name
        from channels c
        left join users u on c.owner_id = u.id
