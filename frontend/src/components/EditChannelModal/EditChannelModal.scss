@@ -206,6 +206,76 @@
     }
   }
 }
+/* === Stream Info (read-only) === */
+.stream-info {
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  background-color: color.adjust($background-color-primary, $lightness: -3%);
+  border: 2px solid $border-color-primary;
+  border-radius: 8px;
+  font-family: $primary-font-family;
+
+  h3 {
+    margin: 0 0 0.75rem;
+    font-size: 1.1rem;
+    color: $secondary-color;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0.75rem 0;
+    padding: 0.5rem;
+    background-color: $background-color-primary;
+    border: 1px solid $border-color-primary;
+    border-radius: 4px;
+    color: $text-color-primary;
+    font-size: 0.9rem;
+    text-align: left;
+    word-break: break-all;
+
+    strong {
+      color: $secondary-color;
+      display: block;
+      margin-bottom: 0.25rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 0.8rem;
+    }
+  }
+
+  .stream-info-actions {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin-top: .75rem;
+
+    button {
+      padding: 0.5rem 1rem;
+      background-color: $secondary-color;
+      color: $background-color-primary;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      font-family: $primary-font-family;
+      cursor: pointer;
+      transition: all 0.3s ease-in-out;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+
+      &:hover {
+        background-color: color.adjust($secondary-color, $lightness: 10%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba($secondary-color, 0.3);
+      }
+      &:active { transform: translateY(0); }
+    }
+  }
+}
+
 /* === Toggle button (Add Event) === */
 .toggle-btn {
   display: inline-flex;
@@ -383,6 +453,27 @@
       .btn-primary {
         padding: 0.5rem 0.9rem;
         font-size: 0.8rem;
+      }
+    }
+  }
+
+  .stream-info {
+    padding: 1rem;
+    margin-bottom: 1rem;
+
+    h3 {
+      font-size: 0.95rem;
+    }
+
+    p {
+      font-size: 0.8rem;
+      padding: 0.4rem;
+    }
+
+    .stream-info-actions {
+      button {
+        padding: 0.4rem 0.7rem;
+        font-size: 0.75rem;
       }
     }
   }

@@ -21,6 +21,9 @@ type Channel = {
   widgets?: WidgetConfig[];
   about_text?: string;
   first_live_at?: string | null;
+  stream_key?: string;
+  ingest_app?: string;
+  playback_path?: string;
 };
 
 type Session = {
@@ -128,6 +131,11 @@ const EditChannelModal: React.FC<Props> = ({ isOpen, onClose, channel, onUpdate 
   const [displayName, setDisplayName] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Stream info (read-only)
+  const [streamKey, setStreamKey] = useState("");
+  const [ingestApp, setIngestApp] = useState("live");
+  const [playbackPath, setPlaybackPath] = useState("");
+
   // Widgets
   const [selectedWidgets, setSelectedWidgets] = useState<WidgetConfig[]>([]);
   const [aboutText, setAboutText] = useState("");
@@ -165,6 +173,9 @@ const EditChannelModal: React.FC<Props> = ({ isOpen, onClose, channel, onUpdate 
             setSelectedWidgets(channelData.widgets || []);
             setAboutText(channelData.about_text || "");
             setExistingSessions(channelData.sessions || []);
+            setStreamKey(channelData.stream_key || "");
+            setIngestApp(channelData.ingest_app || "live");
+            setPlaybackPath(channelData.playback_path || "");
           }
 
           // Fetch schedule if Now Playing widget is selected
@@ -432,6 +443,26 @@ const EditChannelModal: React.FC<Props> = ({ isOpen, onClose, channel, onUpdate 
         <button className="close-btn" onClick={onClose} aria-label="Close">X</button>
 
         <h2>Edit Channel {channel.channel_number}</h2>
+
+        {streamKey && (
+          <div className="stream-info">
+            <h3>Stream Configuration</h3>
+            <p><strong>Stream Key:</strong> {streamKey}</p>
+            <p><strong>Ingest URL for OBS:</strong> rtmp://cinezoo.tv/{ingestApp}/{streamKey}</p>
+            <p><strong>Playback URL (HLS):</strong> {playbackPath}</p>
+            <div className="stream-info-actions">
+              <button type="button" onClick={() => navigator.clipboard.writeText(streamKey)}>
+                Copy Stream Key
+              </button>
+              <button type="button" onClick={() => navigator.clipboard.writeText(`rtmp://cinezoo.tv/${ingestApp}/${streamKey}`)}>
+                Copy Ingest URL
+              </button>
+              <button type="button" onClick={() => navigator.clipboard.writeText(playbackPath)}>
+                Copy Playback URL
+              </button>
+            </div>
+          </div>
+        )}
 
         <form className="edit-channel-form" onSubmit={handleSubmit}>
           <div className="row">
