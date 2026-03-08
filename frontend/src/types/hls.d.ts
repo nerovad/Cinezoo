@@ -7,6 +7,11 @@ declare module 'hls.js' {
     destroy(): void;
     static Events: {
       MANIFEST_PARSED: string;
+      ERROR: string;
+    };
+    static ErrorTypes: {
+      NETWORK_ERROR: string;
+      MEDIA_ERROR: string;
     };
   }
 }

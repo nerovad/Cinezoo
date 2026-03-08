@@ -145,7 +145,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
         v.play().catch(() => { });
       });
 
-      // @ts-expect-error hls.js types incomplete for ERROR event
       hls.on(Hls.Events.ERROR, (_evt: any, data: any) => {
         const fatal = !!data?.fatal;
         const type = data?.type as string | undefined;
