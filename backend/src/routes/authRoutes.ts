@@ -80,11 +80,44 @@ router.post(
         return; // ✅
       }
 
-      const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: "1h" });
+      const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: "30d" });
       res.json({ token });
       return; // ✅
     } catch (error) {
       next(error);
+    }
+  }
+);
+
+// POST /api/auth/refresh - Issue a new token if the current one is still valid
+router.post(
+  "/refresh",
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const authHeader = req.headers.authorization;
+      const token = authHeader && authHeader.split(' ')[1];
+
+      if (!token) {
+        res.status(401).json({ error: "Token required" });
+        return;
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: number };
+
+      // Verify user still exists
+      const result = await pool.query("SELECT id FROM users WHERE id = $1", [decoded.id]);
+      if (result.rows.length === 0) {
+        res.status(401).json({ error: "User not found" });
+        return;
+      }
+
+      // Issue a fresh 30-day token
+      const newToken = jwt.sign({ id: decoded.id }, process.env.JWT_SECRET as string, { expiresIn: "30d" });
+      res.json({ token: newToken });
+      return;
+    } catch (error) {
+      res.status(401).json({ error: "Invalid or expired token" });
+      return;
     }
   }
 );

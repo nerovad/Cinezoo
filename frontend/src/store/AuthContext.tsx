@@ -79,6 +79,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Silently refresh the token to extend the session
+  const refreshToken = async (currentToken: string) => {
+    try {
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${currentToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setToken(data.token);
+        localStorage.setItem('token', data.token);
+      } else {
+        // Token is invalid/expired, log out
+        localStorage.removeItem('token');
+        setToken(null);
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+    }
+  };
+
+  // Auto-refresh token every 24 hours to keep session alive
+  useEffect(() => {
+    if (!token) return;
+
+    const REFRESH_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+    const interval = setInterval(() => {
+      refreshToken(token);
+    }, REFRESH_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [token]);
+
   const login = async (emailOrUsername: string, password: string): Promise<boolean> => {
     try {
       const response = await fetch('/api/auth/login', {
