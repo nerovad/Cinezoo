@@ -24,6 +24,8 @@ type Channel = {
   stream_key?: string;
   ingest_app?: string;
   playback_path?: string;
+  thumbnail?: string | null;
+  intermission_url?: string | null;
 };
 
 type Session = {
@@ -159,6 +161,14 @@ const EditChannelModal: React.FC<Props> = ({ isOpen, onClose, channel, onUpdate 
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
   const [channelFilms, setChannelFilms] = useState<any[]>([]);
 
+  // Thumbnail
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+
+  // Intermission screen
+  const [intermissionFile, setIntermissionFile] = useState<File | null>(null);
+  const [intermissionPreview, setIntermissionPreview] = useState<string | null>(null);
+
   // Load channel data when modal opens
   useEffect(() => {
     if (channel && isOpen) {
@@ -176,6 +186,11 @@ const EditChannelModal: React.FC<Props> = ({ isOpen, onClose, channel, onUpdate 
             setStreamKey(channelData.stream_key || "");
             setIngestApp(channelData.ingest_app || "live");
             setPlaybackPath(channelData.playback_path || "");
+            // Load existing thumbnail/intermission previews
+            setThumbnailPreview(channelData.thumbnail || null);
+            setThumbnailFile(null);
+            setIntermissionPreview(channelData.intermission_url || null);
+            setIntermissionFile(null);
           }
 
           // Fetch schedule if Now Playing widget is selected
@@ -384,6 +399,64 @@ const EditChannelModal: React.FC<Props> = ({ isOpen, onClose, channel, onUpdate 
     }
   };
 
+  // Thumbnail handlers
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setThumbnailFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setThumbnailPreview(previewUrl);
+    }
+  };
+
+  const removeThumbnail = () => {
+    if (thumbnailPreview && thumbnailFile) {
+      URL.revokeObjectURL(thumbnailPreview);
+    }
+    setThumbnailFile(null);
+    setThumbnailPreview(null);
+  };
+
+  // Intermission handlers
+  const handleIntermissionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIntermissionFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setIntermissionPreview(previewUrl);
+    }
+  };
+
+  const removeIntermission = () => {
+    if (intermissionPreview && intermissionFile) {
+      URL.revokeObjectURL(intermissionPreview);
+    }
+    setIntermissionFile(null);
+    setIntermissionPreview(null);
+  };
+
+  // Cleanup preview URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (thumbnailPreview && thumbnailFile) {
+        URL.revokeObjectURL(thumbnailPreview);
+      }
+      if (intermissionPreview && intermissionFile) {
+        URL.revokeObjectURL(intermissionPreview);
+      }
+    };
+  }, [thumbnailPreview, intermissionPreview, thumbnailFile, intermissionFile]);
+
+  // Convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit() || !channel) return;
@@ -391,10 +464,25 @@ const EditChannelModal: React.FC<Props> = ({ isOpen, onClose, channel, onUpdate 
     setSubmitting(true);
     try {
       const token = localStorage.getItem("token");
+
+      // Convert thumbnail to base64 if a new file was selected
+      let thumbnailBase64: string | null = null;
+      if (thumbnailFile) {
+        thumbnailBase64 = await fileToBase64(thumbnailFile);
+      }
+
+      // Convert intermission to base64 if a new file was selected
+      let intermissionBase64: string | null = null;
+      if (intermissionFile) {
+        intermissionBase64 = await fileToBase64(intermissionFile);
+      }
+
       const body: any = {
         display_name: displayName,
         widgets: selectedWidgets.length > 0 ? selectedWidgets : null,
         about_text: aboutText || null,
+        thumbnail: thumbnailBase64,
+        intermission: intermissionBase64,
       };
 
       if (addEvent) {
@@ -477,6 +565,72 @@ const EditChannelModal: React.FC<Props> = ({ isOpen, onClose, channel, onUpdate 
               required
             />
             <small className="form-hint">{displayName.length}/20 characters</small>
+          </div>
+
+          {/* Thumbnail Upload */}
+          <div className="row">
+            <label htmlFor="edit-thumbnail-upload">Channel Thumbnail</label>
+            {thumbnailPreview ? (
+              <div className="thumbnail-preview">
+                <img src={thumbnailPreview} alt="Thumbnail preview" />
+                <button
+                  type="button"
+                  className="thumbnail-remove"
+                  onClick={removeThumbnail}
+                  aria-label="Remove thumbnail"
+                >
+                  ×
+                </button>
+              </div>
+            ) : (
+              <div className="thumbnail-upload-area">
+                <input
+                  id="edit-thumbnail-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleThumbnailChange}
+                  className="thumbnail-input"
+                />
+                <label htmlFor="edit-thumbnail-upload" className="thumbnail-upload-label">
+                  <span className="upload-icon">📷</span>
+                  <span>Click to upload thumbnail</span>
+                </label>
+              </div>
+            )}
+            <small className="form-hint">Optional. Recommended size: 320x180 pixels</small>
+          </div>
+
+          {/* Intermission Screen Upload */}
+          <div className="row">
+            <label htmlFor="edit-intermission-upload">Intermission Screen</label>
+            {intermissionPreview ? (
+              <div className="thumbnail-preview">
+                <img src={intermissionPreview} alt="Intermission preview" />
+                <button
+                  type="button"
+                  className="thumbnail-remove"
+                  onClick={removeIntermission}
+                  aria-label="Remove intermission screen"
+                >
+                  ×
+                </button>
+              </div>
+            ) : (
+              <div className="thumbnail-upload-area">
+                <input
+                  id="edit-intermission-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleIntermissionChange}
+                  className="thumbnail-input"
+                />
+                <label htmlFor="edit-intermission-upload" className="thumbnail-upload-label">
+                  <span className="upload-icon">TV</span>
+                  <span>Upload custom intermission screen</span>
+                </label>
+              </div>
+            )}
+            <small className="form-hint">Optional. Shown when your channel is offline. A default screen is used if none is uploaded. Recommended: 1920x1080</small>
           </div>
 
           {/* Widget Selector */}

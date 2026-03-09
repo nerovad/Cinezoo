@@ -501,7 +501,7 @@ export async function updateChannel(req: Request, res: Response, next: NextFunct
   if (!uid) return;
 
   const channelId = req.params.id;
-  const { display_name, description, event, films, widgets, about_text, first_live_at } = req.body;
+  const { display_name, description, event, films, widgets, about_text, first_live_at, thumbnail, intermission } = req.body;
 
   const client = await pool.connect();
   let begun = false;
@@ -512,7 +512,7 @@ export async function updateChannel(req: Request, res: Response, next: NextFunct
 
     // Verify ownership
     const ownership = await client.query(
-      `SELECT id FROM channels WHERE id = $1 AND owner_id = $2`,
+      `SELECT id, slug FROM channels WHERE id = $1 AND owner_id = $2`,
       [channelId, uid]
     );
 
@@ -523,6 +523,13 @@ export async function updateChannel(req: Request, res: Response, next: NextFunct
       return;
     }
 
+    const channelSlug = ownership.rows[0].slug;
+
+    // Save thumbnail if provided
+    const thumbnailUrl = thumbnail ? saveBase64Image(thumbnail, channelSlug, "thumbnails") : null;
+    // Save intermission screen if provided
+    const intermissionUrl = intermission ? saveBase64Image(intermission, channelSlug, "intermissions") : null;
+
     // Update channel
     const updated = await client.query(
       `UPDATE channels
@@ -530,10 +537,12 @@ export async function updateChannel(req: Request, res: Response, next: NextFunct
            description = COALESCE($2, description),
            widgets = COALESCE($3, widgets),
            about_text = COALESCE($4, about_text),
-           first_live_at = COALESCE($5, first_live_at)
+           first_live_at = COALESCE($5, first_live_at),
+           thumbnail = COALESCE($7, thumbnail),
+           intermission_url = COALESCE($8, intermission_url)
        WHERE id = $6
        RETURNING *`,
-      [display_name, description, widgets ? JSON.stringify(widgets) : null, about_text, first_live_at, channelId]
+      [display_name, description, widgets ? JSON.stringify(widgets) : null, about_text, first_live_at, channelId, thumbnailUrl, intermissionUrl]
     );
 
     // Handle event creation if provided (same logic as createChannel)
