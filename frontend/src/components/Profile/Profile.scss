@@ -36,6 +36,107 @@
     }
   }
 
+  /* ===== User Search Bar ===== */
+  .user-search-bar {
+    width: 100%;
+    max-width: 400px;
+    position: relative;
+    z-index: 20;
+
+    .user-search-input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid $border-color-primary;
+      background: $background-color-secondary;
+      color: $text-color-primary;
+      font-size: 14px;
+      font-family: $primary-font-family;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+      &::placeholder {
+        color: $text-color-secondary;
+      }
+
+      &:focus {
+        border-color: $primary-color;
+        box-shadow: 0 0 0 2px rgba($primary-color, 0.25);
+      }
+    }
+
+    .search-loading {
+      padding: 8px 14px;
+      color: $text-color-secondary;
+      font-size: 13px;
+    }
+
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin-top: 4px;
+      background: $background-color-primary;
+      border: 1px solid $border-color-primary;
+      border-radius: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .search-result-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      cursor: pointer;
+      text-decoration: none;
+      color: $text-color-primary;
+      transition: background 0.15s ease;
+
+      &:hover {
+        background: rgba($primary-color, 0.1);
+      }
+
+      .result-avatar {
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+
+        img {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          object-fit: cover;
+        }
+
+        .avatar-placeholder {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: $background-color-secondary;
+          display: grid;
+          place-items: center;
+          font-weight: 700;
+          font-size: 14px;
+          color: $text-color-primary;
+        }
+      }
+
+      .result-handle {
+        font-weight: 600;
+        font-size: 14px;
+      }
+    }
+
+    .no-results {
+      padding: 8px 14px;
+      color: $text-color-secondary;
+      font-size: 13px;
+    }
+  }
+
   /* ===== Header ===== */
   
  .profile-header {
@@ -482,6 +583,11 @@
   @media (max-width: 480px) {
     margin: 0 auto;
     padding: 0 8px 24px;
+
+    /* User search bar - full width on mobile */
+    .user-search-bar {
+      max-width: 100%;
+    }
 
     /* Home Button - smaller and better positioned */
     .profile-home-button {

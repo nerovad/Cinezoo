@@ -89,6 +89,12 @@ const Profile: React.FC = () => {
   const [bioDraft, setBioDraft] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  // User search state
+  const [userSearch, setUserSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<{ userId: string; userHandle: string; userAvatar?: string }[]>([]);
+  const [searching, setSearching] = useState(false);
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [deletingChannelId, setDeletingChannelId] = useState<string | null>(null);
 
@@ -114,6 +120,26 @@ const Profile: React.FC = () => {
     } catch (error) {
       console.error('Failed to update avatar:', error);
     }
+  };
+
+  const handleUserSearch = (query: string) => {
+    setUserSearch(query);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const results = await api.get(`/api/messages/users/search?q=${encodeURIComponent(query)}`, []);
+        setSearchResults(results);
+      } catch (error) {
+        console.error("Failed to search users:", error);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
   };
 
   // Listen for storage changes (like your App.tsx does)
@@ -253,6 +279,42 @@ const Profile: React.FC = () => {
       {/* Header */}
       <div className="profile-header">
         <div className="profile-header-content">
+          <div className="user-search-bar">
+            <input
+              type="text"
+              className="user-search-input"
+              placeholder="Search for a user..."
+              value={userSearch}
+              onChange={(e) => handleUserSearch(e.target.value)}
+            />
+            {searching && <div className="search-loading">Searching...</div>}
+            {searchResults.length > 0 && (
+              <div className="search-results">
+                {searchResults.map((user) => (
+                  <a
+                    key={user.userId}
+                    className="search-result-item"
+                    href={`/profile/${user.userHandle}`}
+                  >
+                    <div className="result-avatar">
+                      {user.userAvatar ? (
+                        <img src={user.userAvatar} alt={user.userHandle} />
+                      ) : (
+                        <div className="avatar-placeholder">
+                          {user.userHandle[0].toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <span className="result-handle">{user.userHandle}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+            {userSearch.length >= 2 && !searching && searchResults.length === 0 && (
+              <div className="no-results">No users found</div>
+            )}
+          </div>
+
           <div className="profile-home-button">
             <a href="/">
               <img src={Logo} alt="Cinezoo" className="profile-home-logo" />
