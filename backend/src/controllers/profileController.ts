@@ -65,6 +65,78 @@ export async function getProfile(req: AuthRequest, res: Response): Promise<void>
   }
 }
 
+export async function getPublicProfile(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { handle } = req.params;
+    // Strip leading @ if present
+    const cleanHandle = handle.startsWith('@') ? handle.slice(1) : handle;
+
+    // Look up user by handle in user_profiles or by username in users
+    const userQuery = `
+      SELECT u.id, u.username, up.handle, up.banner_url, up.avatar_url, up.bio, up.location, up.website
+      FROM users u
+      LEFT JOIN user_profiles up ON up.user_id = u.id
+      WHERE u.username ILIKE $1 OR up.handle ILIKE $2
+      LIMIT 1
+    `;
+    const userResult = await pool.query(userQuery, [cleanHandle, `@${cleanHandle}`]);
+
+    if (userResult.rows.length === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const user = userResult.rows[0];
+    const userId = user.id;
+
+    // Get stats
+    const statsQuery = `
+      SELECT
+        (SELECT COUNT(*) FROM follows WHERE following_id = $1) as followers_count,
+        (SELECT COUNT(*) FROM follows WHERE follower_id = $1) as following_count,
+        (SELECT COUNT(*) FROM user_profile_film_links WHERE user_id = $1) as films_count,
+        (SELECT COUNT(*) FROM user_profile_awards WHERE user_id = $1) as awards_count
+    `;
+    const statsResult = await pool.query(statsQuery, [userId]);
+    const stats = statsResult.rows[0] || {};
+
+    // Get channels
+    const channelsQuery = `SELECT id, name, display_name, channel_number, slug, description, thumbnail FROM channels WHERE owner_id = $1 ORDER BY channel_number`;
+    const channelsResult = await pool.query(channelsQuery, [userId]);
+
+    const profileData = {
+      id: userId.toString(),
+      handle: user.handle || `@${user.username}`,
+      displayName: user.handle || `@${user.username}`,
+      bannerUrl: user.banner_url,
+      avatarUrl: user.avatar_url,
+      bio: user.bio,
+      location: user.location,
+      website: user.website,
+      stats: {
+        followers: parseInt(stats.followers_count) || 0,
+        following: parseInt(stats.following_count) || 0,
+        films: parseInt(stats.films_count) || 0,
+        awards: parseInt(stats.awards_count) || 0
+      },
+      channels: channelsResult.rows.map((ch: any) => ({
+        id: ch.id.toString(),
+        name: ch.name,
+        display_name: ch.display_name,
+        channel_number: ch.channel_number,
+        slug: ch.slug,
+        description: ch.description,
+        thumbnail: ch.thumbnail
+      }))
+    };
+
+    res.json(profileData);
+  } catch (error) {
+    console.error('Get public profile error:', error);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
 export async function updateBio(req: AuthRequest, res: Response): Promise<void> {
   try {
     const userId = req.userId;

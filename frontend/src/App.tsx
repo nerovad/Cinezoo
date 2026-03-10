@@ -13,6 +13,7 @@ import Auth from "./components/Auth/Auth.tsx";
 import Settings from "./components/Settings/Settings.tsx";
 import Upload from "./components/Upload/Upload.tsx";
 import Profile from "./components/Profile/Profile.tsx";
+import UserProfile from "./components/Profile/UserProfile.tsx";
 import AdminFestivals from "./components/Pages/AdminFestivals.tsx";
 import Admin from "./components/Pages/Admin.tsx";
 import "./App.scss";
@@ -144,6 +145,7 @@ const App: React.FC = () => {
           <Route path="/upload" element={<Upload />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/:handle" element={<UserProfile />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/festivals" element={<AdminFestivals />} />
 
