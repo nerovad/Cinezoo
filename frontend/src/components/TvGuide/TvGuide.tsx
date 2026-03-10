@@ -2,13 +2,6 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import "./TvGuide.scss";
 import { useApi } from "../../utils/useApi";
 
-// Try to import your chat store if available; fall back gracefully.
-let useChatStore: any = null;
-try {
-  // @ts-ignore
-  useChatStore = require("../../store/useChatStore").useChatStore;
-} catch { /* optional */ }
-
 type Channel = {
   id: string;
   name: string;
@@ -30,15 +23,6 @@ const TvGuide: React.FC<TvGuideProps> = ({ isOpen, closeGuide }) => {
   const api = useApi();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(false);
-
-  // Pull channels from your store if available (same logic as profile.tsx)
-  const storeChannels = useMemo(() => {
-    try {
-      return useChatStore ? useChatStore.getState?.().channels ?? [] : [];
-    } catch {
-      return [];
-    }
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -71,13 +55,9 @@ const TvGuide: React.FC<TvGuideProps> = ({ isOpen, closeGuide }) => {
 
       setLoading(true);
       try {
-        // Load channels (from store or API) - same pattern as profile.tsx
-        if (storeChannels && storeChannels.length > 0) {
-          if (mounted) setChannels(storeChannels);
-        } else {
-          const channelsData = await api.get("/api/channels/mine", []);
-          if (mounted) setChannels(channelsData);
-        }
+        // Fetch all channels (not just the user's own)
+        const channelsData = await api.get("/api/channels", []);
+        if (mounted) setChannels(channelsData);
       } catch (error) {
         console.error('Failed to load channels:', error);
       } finally {
@@ -90,7 +70,7 @@ const TvGuide: React.FC<TvGuideProps> = ({ isOpen, closeGuide }) => {
     return () => {
       mounted = false;
     };
-  }, [isOpen, storeChannels]);
+  }, [isOpen]);
 
   // Sort channels by channel_number
   const sortedChannels = useMemo(() => {
