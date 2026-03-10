@@ -49,8 +49,8 @@ function saveBase64Image(base64Data: string, channelSlug: string, subfolder: str
   if (!base64Data) return null;
 
   try {
-    // Extract mime type and data from base64 string
-    const matches = base64Data.match(/^data:image\/(\w+);base64,(.+)$/);
+    // Extract mime type and data from base64 string (supports image and video)
+    const matches = base64Data.match(/^data:(?:image|video)\/(\w+);base64,(.+)$/);
     if (!matches) return null;
 
     const extension = matches[1];

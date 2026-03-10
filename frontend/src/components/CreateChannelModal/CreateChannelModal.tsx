@@ -510,7 +510,7 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
                 <input
                   id="intermission-upload"
                   type="file"
-                  accept="image/*"
+                  accept="image/*,video/mp4,video/webm"
                   onChange={handleIntermissionChange}
                   className="thumbnail-input"
                 />

@@ -620,7 +620,7 @@ const EditChannelModal: React.FC<Props> = ({ isOpen, onClose, channel, onUpdate 
                 <input
                   id="edit-intermission-upload"
                   type="file"
-                  accept="image/*"
+                  accept="image/*,video/mp4,video/webm"
                   onChange={handleIntermissionChange}
                   className="thumbnail-input"
                 />

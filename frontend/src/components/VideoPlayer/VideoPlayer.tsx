@@ -386,9 +386,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
 
   useEffect(() => () => cleanupHls(), []);
 
-  // Resolve the intermission image: custom per-channel or system default
+  // Resolve the intermission source: custom per-channel or system default
   const currentLink = videoLinks[currentIndex];
   const intermissionSrc = currentLink?.intermissionUrl || intermissionDefault;
+  const isIntermissionVideo = !intermissionSrc || /\.(mp4|webm|ogg|mov)(\?|$)/i.test(intermissionSrc) || intermissionSrc === intermissionDefault;
 
   return (
     <div className={`video-container-dboriginals ${getClassNames()}`}>
@@ -405,13 +406,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
         />
         {showIntermission && (
           <div className="intermission-screen">
-            <video
-              src={intermissionSrc}
-              className="intermission-video"
-              autoPlay
-              loop
-              playsInline
-            />
+            {isIntermissionVideo ? (
+              <video
+                src={intermissionSrc}
+                className="intermission-video"
+                autoPlay
+                loop
+                muted
+                playsInline
+              />
+            ) : (
+              <img
+                src={intermissionSrc}
+                className="intermission-video"
+                alt="Intermission"
+              />
+            )}
           </div>
         )}
         <div className="db-originals-next-button" onClick={goToNextVideo}>
