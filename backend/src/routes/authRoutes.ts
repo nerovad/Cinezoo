@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import pool from "../db/pool"; // ✅ default import
+import { authenticateToken, AuthRequest } from "../middleware/authMiddleware";
 
 const router = express.Router();
 
@@ -178,6 +179,47 @@ router.post(
       });
 
       res.json({ message: "If that email is registered, a temporary password has been sent." });
+      return;
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// POST /api/auth/change-password (authenticated)
+router.post(
+  "/change-password",
+  authenticateToken,
+  [
+    body("currentPassword").notEmpty().withMessage("Current password is required"),
+    body("newPassword").isLength({ min: 6 }).withMessage("New password must be at least 6 characters long"),
+  ],
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { currentPassword, newPassword } = req.body;
+
+      const result = await pool.query("SELECT password FROM users WHERE id = $1", [req.userId]);
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      const isMatch = await bcrypt.compare(currentPassword, result.rows[0].password);
+      if (!isMatch) {
+        res.status(400).json({ error: "Current password is incorrect" });
+        return;
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await pool.query("UPDATE users SET password = $1 WHERE id = $2", [hashedPassword, req.userId]);
+
+      res.json({ message: "Password updated successfully" });
       return;
     } catch (error) {
       next(error);

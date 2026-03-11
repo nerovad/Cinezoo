@@ -548,6 +548,23 @@
   .switch input:checked + .slider { background: rgba($secondary-color, .85); }
   .switch input:checked + .slider:before { transform: translateX(20px); }
 
+  .password-setting .password-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 320px;
+  }
+  .password-error {
+    color: #ff4d4d;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .password-success {
+    color: $secondary-color;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
   /* ===== Skeleton ===== */
   .profile-skeleton {
     .skeleton {

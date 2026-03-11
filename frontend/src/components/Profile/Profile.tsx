@@ -89,6 +89,14 @@ const Profile: React.FC = () => {
   const [bioDraft, setBioDraft] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
   // User search state
   const [userSearch, setUserSearch] = useState("");
   const [searchResults, setSearchResults] = useState<{ userId: string; userHandle: string; userAvatar?: string }[]>([]);
@@ -222,6 +230,33 @@ const Profile: React.FC = () => {
       }
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const onChangePassword = async () => {
+    setPasswordError("");
+    setPasswordSuccess("");
+
+    if (newPassword.length < 6) {
+      setPasswordError("New password must be at least 6 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await api.post("/api/auth/change-password", { currentPassword, newPassword });
+      setPasswordSuccess("Password updated successfully.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      setPasswordError(error?.message || "Failed to change password.");
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -531,6 +566,43 @@ const Profile: React.FC = () => {
                     <span className="slider" />
                   </label>
                   <span>Make profile discoverable</span>
+                </div>
+              </div>
+
+              <div className="setting password-setting">
+                <div className="setting-title">Change Password</div>
+                <div className="setting-desc">Update your account password.</div>
+                <div className="password-form">
+                  <input
+                    type="password"
+                    className="input"
+                    placeholder="Current password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                  />
+                  <input
+                    type="password"
+                    className="input"
+                    placeholder="New password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                  <input
+                    type="password"
+                    className="input"
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                  {passwordError && <div className="password-error">{passwordError}</div>}
+                  {passwordSuccess && <div className="password-success">{passwordSuccess}</div>}
+                  <button
+                    className="btn primary"
+                    onClick={onChangePassword}
+                    disabled={isChangingPassword || !currentPassword || !newPassword || !confirmPassword}
+                  >
+                    {isChangingPassword ? "Updating..." : "Update Password"}
+                  </button>
                 </div>
               </div>
 
