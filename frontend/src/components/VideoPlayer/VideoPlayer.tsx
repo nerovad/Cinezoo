@@ -48,6 +48,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
   const switchingRef = useRef(false);
   const retryRef = useRef(0);
   const initialLoadRef = useRef(false);
+  const hasUserInteractedRef = useRef(false);
   const goToNextVideoRef = useRef<(() => void) | null>(null);
 
   const { setChannelId } = useChatStore();
@@ -116,12 +117,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     cleanupHls();
     setShowIntermission(false);
 
+    // Only force mute on the very first load (browser autoplay policy).
+    // After the user has unmuted, preserve their preference on channel switches.
+    const shouldMute = !hasUserInteractedRef.current;
+
     if (src.endsWith(".mp4")) {
       console.log("[loadVideo] Loading MP4, attaching ended listener");
       v.src = src;
       attachEndedForMp4();
-      v.muted = true;
-      v.play().catch(() => { });
+      if (shouldMute) v.muted = true;
+      v.play().catch(() => {
+        // If play fails unmuted, mute and retry (browser policy)
+        v.muted = true;
+        setIsMuted(true);
+        setShowMuteIcon(true);
+        v.play().catch(() => { });
+      });
       return;
     }
 
@@ -157,8 +168,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
       hls.attachMedia(v);
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        v.muted = true;
-        v.play().catch(() => { });
+        if (shouldMute) v.muted = true;
+        v.play().catch(() => {
+          v.muted = true;
+          setIsMuted(true);
+          setShowMuteIcon(true);
+          v.play().catch(() => { });
+        });
       });
 
       hls.on(Hls.Events.ERROR, (_evt: any, data: any) => {
@@ -191,8 +207,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     const vtag = videoRef.current;
     if (vtag?.canPlayType("application/vnd.apple.mpegurl")) {
       vtag.src = src;
-      vtag.muted = true;
-      vtag.play().catch(() => { });
+      if (shouldMute) vtag.muted = true;
+      vtag.play().catch(() => {
+        vtag.muted = true;
+        setIsMuted(true);
+        setShowMuteIcon(true);
+        vtag.play().catch(() => { });
+      });
       return;
     }
 
@@ -233,6 +254,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     if (!v) return;
     const muted = !v.muted;
     v.muted = muted;
+    if (!muted) hasUserInteractedRef.current = true;
     setIsMuted(muted);
     setShowMuteIcon(muted);
   };
