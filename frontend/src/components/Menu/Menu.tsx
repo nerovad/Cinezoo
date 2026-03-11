@@ -1,10 +1,32 @@
 import React, { useMemo, useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import io from "socket.io-client";
 import "./Menu.scss";
 import RewindIcon from "../../assets/rewind_icon.svg";
+import { SOCKET_URL } from "../../config";
 import { useChatStore } from "../../store/useChatStore";
 import TournamentBracket from "./TournamentBracket";
 import AboutWidget from "./AboutWidget";
 import NowPlayingWidget from "./NowPlayingWidget";
+
+/* === VIEWER COUNT FORMATTING === */
+// <100: exact number (single digits e.g. 1, 23, 99)
+// 100–999: rounded to nearest 50 (e.g. 150, 200, 950)
+// 1000+: rounded to nearest 100 shown as k (e.g. 1.1k, 3.4k, 10.3k)
+function formatViewers(n: number): string {
+  if (n < 100) return String(n);
+  if (n < 1000) return String(Math.round(n / 50) * 50);
+  const rounded = Math.round(n / 100) * 100;
+  const k = rounded / 1000;
+  return `${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
+}
+
+type TrendingChannel = {
+  slug: string;
+  name: string;
+  channelNumber: number | null;
+  viewers: number;
+};
 
 /* === PROPS === */
 interface UtilitiesProps {
@@ -257,9 +279,28 @@ const FilmGrid: React.FC<{
 const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = false }) => {
   const [activeModal, setActiveModal] = useState<ModalKind>(null);
   const toggleMenu = () => setIsOpen(!isOpen);
+  const navigate = useNavigate();
 
   // get current channel from store (VideoPlayer sets it)
   const { channelId } = useChatStore(); // assumes store has { channelId }
+
+  // Trending channels via socket viewer counts
+  const [trending, setTrending] = useState<TrendingChannel[]>([]);
+
+  useEffect(() => {
+    const sock = io(SOCKET_URL, {
+      withCredentials: true,
+      transports: ["websocket"],
+    });
+
+    sock.on("viewerCounts", (data: TrendingChannel[]) => {
+      setTrending(data);
+    });
+
+    return () => {
+      sock.disconnect();
+    };
+  }, []);
   const [films, setFilms] = useState<Film[]>([]);
   const [idx, setIdx] = useState(0);
   const [, setEventType] = useState<string | null>(null);
@@ -474,6 +515,30 @@ const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = fal
               </li>
             ))}
           </ul>
+
+          {/* Trending Channels */}
+          {trending.length > 0 && (
+            <div className="trending-channels">
+              <h4>Trending</h4>
+              <ul>
+                {trending.map((ch, i) => (
+                  <li
+                    key={ch.slug}
+                    className={ch.slug === channelId ? "active" : ""}
+                    onClick={() => navigate(`/channel/${ch.slug}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && navigate(`/channel/${ch.slug}`)}
+                  >
+                    <span className="trending-rank">{i + 1}</span>
+                    <span className="trending-name">{ch.name}</span>
+                    <span className="trending-viewers">{formatViewers(ch.viewers)} watching</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Optional quick nav between films when ballot open */}
           {activeModal === "ballot" && films.length > 1 && (
             <div className="film-stepper">

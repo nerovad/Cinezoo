@@ -682,6 +682,74 @@ $lava-purple-accent: rgba(color.adjust($primary-color, $lightness: 15%), 0.3);
   }
 }
 
+/* ===== TRENDING CHANNELS ===== */
+.trending-channels {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+
+  h4 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0 0 0.5rem 0.25rem;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    font-size: 0.85rem;
+    margin-bottom: 2px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &.active {
+      background: rgba($primary-color, 0.15);
+
+      .trending-rank {
+        color: $primary-color;
+      }
+    }
+  }
+
+  .trending-rank {
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    min-width: 14px;
+    text-align: center;
+  }
+
+  .trending-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #fff;
+    font-weight: 500;
+  }
+
+  .trending-viewers {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
+  }
+}
+
 /* ===== LAVA LAMP ANIMATIONS ===== */
 
 // Blob 1: Slow circular path from bottom-left to top-right
