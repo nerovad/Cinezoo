@@ -434,7 +434,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
                 className="intermission-video"
                 autoPlay
                 loop
-                muted
+                muted={!hasUserInteractedRef.current}
                 playsInline
               />
             ) : (
