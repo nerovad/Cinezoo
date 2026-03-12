@@ -276,9 +276,11 @@ const SearchNavBar: React.FC<NavBarProps> = ({
                 className="channel-input"
                 onKeyDown={handleKeyDown}
               />
-              <button className="channel-go-button" onClick={goToChannel}>
-                Go
-              </button>
+              {!isMobile && (
+                <button className="channel-go-button" onClick={goToChannel}>
+                  Go
+                </button>
+              )}
 
               {showSearchDropdown && searchResults.length > 0 && (
                 <div className="search-dropdown">
