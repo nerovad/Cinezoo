@@ -57,6 +57,24 @@
   will-change: transform;
 }
 
+@media (max-width: 768px) {
+  .news-ticker {
+    font-size: 16px;
+    padding: 2px 0;
+  }
+
+  .ticker-toggle {
+    font-size: 11px;
+    padding: 3px 8px;
+
+    .minimized & {
+      top: -20px;
+      font-size: 10px;
+      padding: 1px 10px;
+    }
+  }
+}
+
 @keyframes scroll {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }

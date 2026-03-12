@@ -24,9 +24,10 @@ const NewsTicker: React.FC = () => {
 
   // Set CSS variable for other components to adjust their height
   useEffect(() => {
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
     document.documentElement.style.setProperty(
       '--ticker-height',
-      isMinimized ? '0px' : '50px'
+      isMinimized ? '0px' : isMobile ? '28px' : '50px'
     );
   }, [isMinimized]);
 
