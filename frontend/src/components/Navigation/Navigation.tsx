@@ -62,8 +62,6 @@ interface NavBarProps {
 
   // Mobile props
   isMobile?: boolean;
-  isMenuOpen?: boolean;
-  setIsMenuOpen?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const SearchNavBar: React.FC<NavBarProps> = ({
@@ -79,8 +77,6 @@ const SearchNavBar: React.FC<NavBarProps> = ({
   setIsAuthOpen,
   setAuthMode,
   isMobile = false,
-  isMenuOpen = false,
-  setIsMenuOpen,
 }) => {
   const navigate = useNavigate();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
