@@ -453,7 +453,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
 
       <Chatbox isOpen={isChatOpen} setIsOpen={() => { }} />
 
-      {showMuteIcon && !showIntermission && <img src={muteIcon} alt="Muted" className="mute-icon-overlay" onClick={toggleMute} />}
+      {showMuteIcon && !showIntermission && <img src={muteIcon} alt="Muted" className="mute-icon-overlay" onClick={(e) => { e.stopPropagation(); toggleMute(); }} />}
     </div>
   );
 };
