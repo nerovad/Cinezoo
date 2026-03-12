@@ -569,13 +569,13 @@
     }
 
     .control-pill {
-      padding: 2px 4px;
-      gap: 0;
+      padding: 4px 6px;
+      gap: 4px;
       border-radius: 999px;
 
       &__group {
-        gap: 1px;
-        padding: 0 2px;
+        gap: 6px;
+        padding: 0 4px;
       }
 
       &__divider {
@@ -584,7 +584,7 @@
     }
 
     .channel-button {
-      padding: 2px;
+      padding: 4px;
 
       img {
         height: 18px;
@@ -635,7 +635,7 @@
 
     .mute-button,
     .fullscreen-button {
-      padding: 2px;
+      padding: 4px;
 
       img {
         height: 18px;
