@@ -487,11 +487,13 @@ const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = fal
   return (
     <>
       {/* === SIDEBAR === */}
+      {/* Toggle button outside container so mobile transform doesn't hide it */}
+      <button className={`toggle-button-left ${isOpen ? "open" : ""}`} onClick={toggleMenu}>
+        <img src={RewindIcon} alt="Toggle" />
+      </button>
+
       <div className={`utilities-container ${isOpen ? "open" : ""} ${isMobile ? "mobile" : ""}`}>
         <div className="lava-lamp-bg"></div>
-        <button className={`toggle-button-left ${isOpen ? "open" : ""}`} onClick={toggleMenu}>
-          <img src={RewindIcon} alt="Toggle" />
-        </button>
 
         <div className={`utilities-menu ${isOpen ? "open" : ""}`}>
           {/* Mobile close button */}

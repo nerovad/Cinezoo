@@ -46,10 +46,6 @@ $lava-purple-accent: rgba(color.adjust($primary-color, $lightness: 15%), 0.3);
       box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
     }
 
-    /* Show the toggle button on mobile - same as desktop */
-    .toggle-button-left {
-      display: inline-flex;
-    }
   }
 }
 
