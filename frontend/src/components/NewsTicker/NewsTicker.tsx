@@ -11,10 +11,8 @@ const NewsTicker: React.FC = () => {
 
   useEffect(() => {
     if (!isMinimized && tickerRef.current) {
-      // Get the width of a single instance of the text
-      const singleTextWidth = tickerRef.current.scrollWidth / 4; // Divide by 4 since we have 4 copies
-      // Speed in pixels per second (adjust this value to change speed)
-      const pixelsPerSecond = 30;
+      const singleTextWidth = tickerRef.current.scrollWidth / 2;
+      const pixelsPerSecond = 120;
       const calculatedDuration = singleTextWidth / pixelsPerSecond;
       setDuration(calculatedDuration);
     }
@@ -48,10 +46,8 @@ const NewsTicker: React.FC = () => {
             ref={tickerRef}
             style={{ animationDuration: `${duration}s` }}
           >
-            <span>{tickerText}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-            <span>{tickerText}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-            <span>{tickerText}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-            <span>{tickerText}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+            <span>{tickerText}&nbsp;&nbsp;&nbsp;</span>
+            <span>{tickerText}&nbsp;&nbsp;&nbsp;</span>
           </div>
         </div>
       )}
