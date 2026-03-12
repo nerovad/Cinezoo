@@ -116,6 +116,107 @@
     }
   }
 
+  &__section--channels {
+    margin-top: 2rem;
+  }
+
+  &__slug {
+    font-family: monospace;
+    font-size: 0.78rem;
+    color: $text-color-secondary;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  &__btn {
+    background: transparent;
+    border: 1.5px solid;
+    border-radius: 5px;
+    padding: 4px 10px;
+    font-family: $primary-font-family;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &--edit {
+      border-color: rgba($primary-color, 0.5);
+      color: $primary-color;
+
+      &:hover {
+        background: rgba($primary-color, 0.15);
+      }
+    }
+
+    &--save {
+      border-color: rgba(#4caf50, 0.6);
+      color: #4caf50;
+
+      &:hover {
+        background: rgba(#4caf50, 0.15);
+      }
+    }
+
+    &--cancel {
+      border-color: rgba($text-color-secondary, 0.4);
+      color: $text-color-secondary;
+
+      &:hover {
+        background: rgba($text-color-secondary, 0.1);
+      }
+    }
+
+    &--delete {
+      border-color: rgba(#ff4444, 0.5);
+      color: #ff6b6b;
+
+      &:hover {
+        background: rgba(#ff4444, 0.15);
+      }
+    }
+
+    &--confirm-delete {
+      border-color: rgba(#ff4444, 0.8);
+      color: #ff4444;
+      background: rgba(#ff4444, 0.1);
+
+      &:hover {
+        background: rgba(#ff4444, 0.25);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: wait;
+      }
+    }
+  }
+
+  &__edit-input {
+    background: rgba($background-color-primary, 0.8);
+    color: $text-color-primary;
+    border: 1.5px solid rgba($primary-color, 0.3);
+    border-radius: 5px;
+    padding: 4px 8px;
+    font-family: $primary-font-family;
+    font-size: 0.8rem;
+    width: 100%;
+    min-width: 80px;
+
+    &:focus {
+      outline: none;
+      border-color: $primary-color;
+    }
+
+    &--small {
+      width: 50px;
+      min-width: 50px;
+    }
+  }
+
   &__group-select {
     background: rgba($background-color-primary, 0.8);
     color: $text-color-primary;

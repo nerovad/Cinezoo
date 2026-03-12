@@ -11,6 +11,17 @@ interface UserRow {
   created_at: string;
 }
 
+interface ChannelRow {
+  id: number;
+  slug: string;
+  name: string;
+  display_name: string | null;
+  channel_number: number | null;
+  owner_id: number | null;
+  owner_name: string | null;
+  created_at: string;
+}
+
 const GROUP_LABELS: Record<UserGroup, string> = {
   super_admin: "Super Admin",
   network: "Network",
@@ -25,12 +36,20 @@ const Admin: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
+  const [channels, setChannels] = useState<ChannelRow[]>([]);
+  const [channelsLoading, setChannelsLoading] = useState(true);
+  const [editingChannel, setEditingChannel] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", display_name: "", channel_number: "" });
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+
   useEffect(() => {
     if (!user || user.userGroup !== "super_admin") {
       navigate("/");
       return;
     }
     fetchUsers();
+    fetchChannels();
   }, [user]);
 
   const fetchUsers = async () => {
@@ -71,6 +90,85 @@ const Admin: React.FC = () => {
       setError(err.message);
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const fetchChannels = async () => {
+    try {
+      const res = await fetch("/api/admin/channels", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch channels");
+      const data = await res.json();
+      setChannels(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setChannelsLoading(false);
+    }
+  };
+
+  const startEditing = (ch: ChannelRow) => {
+    setEditingChannel(ch.id);
+    setEditForm({
+      name: ch.name,
+      display_name: ch.display_name || "",
+      channel_number: ch.channel_number?.toString() || "",
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingChannel(null);
+    setEditForm({ name: "", display_name: "", channel_number: "" });
+  };
+
+  const saveChannel = async (channelId: number) => {
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/channels/${channelId}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: editForm.name || undefined,
+          display_name: editForm.display_name || undefined,
+          channel_number: editForm.channel_number ? parseInt(editForm.channel_number) : undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update channel");
+      }
+      const updated = await res.json();
+      setChannels((prev) =>
+        prev.map((ch) => (ch.id === channelId ? { ...ch, ...updated } : ch))
+      );
+      setEditingChannel(null);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const deleteChannel = async (channelId: number) => {
+    setDeletingId(channelId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/channels/${channelId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete channel");
+      }
+      setChannels((prev) => prev.filter((ch) => ch.id !== channelId));
+      setConfirmDeleteId(null);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -129,6 +227,127 @@ const Admin: React.FC = () => {
                     </select>
                   </td>
                   <td>{new Date(u.created_at).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="admin-page__section admin-page__section--channels">
+        <h2>Channel Management</h2>
+        <p className="admin-page__description">
+          View, edit, and delete all channels across the platform.
+        </p>
+
+        {channelsLoading ? (
+          <div className="admin-page__loading">Loading channels...</div>
+        ) : channels.length === 0 ? (
+          <div className="admin-page__loading">No channels found.</div>
+        ) : (
+          <table className="admin-page__table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Display Name</th>
+                <th>#</th>
+                <th>Slug</th>
+                <th>Owner</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {channels.map((ch) => (
+                <tr key={ch.id}>
+                  <td>{ch.id}</td>
+                  {editingChannel === ch.id ? (
+                    <>
+                      <td>
+                        <input
+                          className="admin-page__edit-input"
+                          value={editForm.name}
+                          onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="admin-page__edit-input"
+                          value={editForm.display_name}
+                          onChange={(e) => setEditForm((f) => ({ ...f, display_name: e.target.value }))}
+                          placeholder="Display name"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className="admin-page__edit-input admin-page__edit-input--small"
+                          type="number"
+                          value={editForm.channel_number}
+                          onChange={(e) => setEditForm((f) => ({ ...f, channel_number: e.target.value }))}
+                          placeholder="#"
+                        />
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td>{ch.name}</td>
+                      <td>{ch.display_name || "—"}</td>
+                      <td>{ch.channel_number ?? "—"}</td>
+                    </>
+                  )}
+                  <td className="admin-page__slug">{ch.slug}</td>
+                  <td>{ch.owner_name || "—"}</td>
+                  <td>{new Date(ch.created_at).toLocaleDateString()}</td>
+                  <td className="admin-page__actions">
+                    {editingChannel === ch.id ? (
+                      <>
+                        <button
+                          className="admin-page__btn admin-page__btn--save"
+                          onClick={() => saveChannel(ch.id)}
+                        >
+                          Save
+                        </button>
+                        <button
+                          className="admin-page__btn admin-page__btn--cancel"
+                          onClick={cancelEditing}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : confirmDeleteId === ch.id ? (
+                      <>
+                        <button
+                          className="admin-page__btn admin-page__btn--confirm-delete"
+                          onClick={() => deleteChannel(ch.id)}
+                          disabled={deletingId === ch.id}
+                        >
+                          {deletingId === ch.id ? "..." : "Confirm"}
+                        </button>
+                        <button
+                          className="admin-page__btn admin-page__btn--cancel"
+                          onClick={() => setConfirmDeleteId(null)}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          className="admin-page__btn admin-page__btn--edit"
+                          onClick={() => startEditing(ch)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="admin-page__btn admin-page__btn--delete"
+                          onClick={() => setConfirmDeleteId(ch.id)}
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

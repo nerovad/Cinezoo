@@ -4,6 +4,107 @@ import { AuthRequest, UserGroup } from "../middleware/authMiddleware";
 
 const VALID_GROUPS: UserGroup[] = ['super_admin', 'network', 'general_user'];
 
+/* ==================== Channel Management ==================== */
+
+export async function listAllChannels(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const result = await pool.query(
+      `SELECT c.id, c.slug, c.name, c.display_name, c.channel_number, c.stream_url,
+              c.tags, c.created_at, c.owner_id,
+              u.username as owner_name
+       FROM channels c
+       LEFT JOIN users u ON c.owner_id = u.id
+       ORDER BY c.id`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('List channels error:', error);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
+export async function adminUpdateChannel(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { channelId } = req.params;
+    const { name, display_name, channel_number } = req.body;
+
+    const result = await pool.query(
+      `UPDATE channels
+       SET name = COALESCE($1, name),
+           display_name = COALESCE($2, display_name),
+           channel_number = COALESCE($3, channel_number)
+       WHERE id = $4
+       RETURNING id, slug, name, display_name, channel_number`,
+      [name || null, display_name || null, channel_number ?? null, channelId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Admin update channel error:', error);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
+export async function adminDeleteChannel(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { channelId } = req.params;
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // Check channel exists
+      const ch = await client.query(`SELECT id FROM channels WHERE id = $1`, [channelId]);
+      if (ch.rows.length === 0) {
+        await client.query("ROLLBACK");
+        res.status(404).json({ error: "Channel not found" });
+        return;
+      }
+
+      // Delete schedule items
+      await client.query(`DELETE FROM channel_schedule WHERE channel_id = $1`, [channelId]);
+
+      // Delete tournament matchups for sessions in this channel
+      await client.query(
+        `DELETE FROM tournament_matchups WHERE session_id IN (
+           SELECT id FROM sessions WHERE channel_id = $1
+         )`,
+        [channelId]
+      );
+
+      // Delete session entries
+      await client.query(
+        `DELETE FROM session_entries WHERE session_id IN (
+           SELECT id FROM sessions WHERE channel_id = $1
+         )`,
+        [channelId]
+      );
+
+      // Delete sessions
+      await client.query(`DELETE FROM sessions WHERE channel_id = $1`, [channelId]);
+
+      // Delete the channel
+      await client.query(`DELETE FROM channels WHERE id = $1`, [channelId]);
+
+      await client.query("COMMIT");
+      res.json({ success: true });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Admin delete channel error:', error);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
 export async function listUsers(req: AuthRequest, res: Response): Promise<void> {
   try {
     const result = await pool.query(
