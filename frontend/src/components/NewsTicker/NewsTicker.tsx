@@ -11,7 +11,7 @@ const NewsTicker: React.FC = () => {
 
   useEffect(() => {
     if (!isMinimized && tickerRef.current) {
-      const singleTextWidth = tickerRef.current.scrollWidth / 4;
+      const singleTextWidth = tickerRef.current.scrollWidth / 2;
       const pixelsPerSecond = 30;
       const calculatedDuration = singleTextWidth / pixelsPerSecond;
       setDuration(calculatedDuration);
@@ -46,8 +46,6 @@ const NewsTicker: React.FC = () => {
             ref={tickerRef}
             style={{ animationDuration: `${duration}s`, animationDelay: `${-duration * 0.75}s` }}
           >
-            <span>{tickerText}&nbsp;&nbsp;&nbsp;</span>
-            <span>{tickerText}&nbsp;&nbsp;&nbsp;</span>
             <span>{tickerText}&nbsp;&nbsp;&nbsp;</span>
             <span>{tickerText}&nbsp;&nbsp;&nbsp;</span>
           </div>
