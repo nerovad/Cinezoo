@@ -362,6 +362,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
       loadVideo(link.src);
       setChannelId(link.channel);
       setChannelName(link.channel);
+
+      // Auto-unmute when switching away from the initial channel,
+      // unless the user explicitly muted
+      if (initialLoadRef.current && !userExplicitlyMutedRef.current) {
+        const v = videoRef.current;
+        if (v && v.muted) {
+          v.muted = false;
+          hasUserInteractedRef.current = true;
+          setIsMuted(false);
+          setShowMuteIcon(false);
+        }
+      }
+
       initialLoadRef.current = true;
 
       const hide = setTimeout(() => setChannelName(""), 7000);
@@ -407,32 +420,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
       document.removeEventListener("contextmenu", handleRightClick);
     };
   }, [goToNextVideo, goToPreviousVideo]);
-
-  // Auto-unmute on first user interaction (click, scroll, keypress, touch)
-  // unless the user has explicitly muted via the mute button
-  useEffect(() => {
-    const autoUnmute = () => {
-      const v = videoRef.current;
-      if (!v) return;
-      // Only auto-unmute if still in the browser-policy-muted state,
-      // not if the user explicitly chose to mute
-      if (v.muted && !userExplicitlyMutedRef.current) {
-        v.muted = false;
-        hasUserInteractedRef.current = true;
-        setIsMuted(false);
-        setShowMuteIcon(false);
-      }
-      // Remove all listeners after first interaction
-      events.forEach(evt => document.removeEventListener(evt, autoUnmute));
-    };
-
-    const events = ["click", "scroll", "keydown", "touchstart", "wheel"];
-    events.forEach(evt => document.addEventListener(evt, autoUnmute, { once: true }));
-
-    return () => {
-      events.forEach(evt => document.removeEventListener(evt, autoUnmute));
-    };
-  }, []);
 
   useEffect(() => () => cleanupHls(), []);
 
