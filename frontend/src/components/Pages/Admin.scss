@@ -158,3 +158,51 @@
     }
   }
 }
+
+/* ===== MOBILE STYLES ===== */
+@media (max-width: 768px) {
+  .admin-page {
+    padding: 70px 0.75rem 1rem;
+
+    &__header {
+      margin-bottom: 1rem;
+
+      h1 {
+        font-size: 1.3rem;
+      }
+    }
+
+    &__section {
+      padding: 1rem 0.75rem;
+      border-radius: 8px;
+    }
+
+    &__description {
+      font-size: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    &__table {
+      display: block;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      font-size: 0.75rem;
+
+      th {
+        padding: 8px 8px;
+        font-size: 0.65rem;
+        white-space: nowrap;
+      }
+
+      td {
+        padding: 8px 8px;
+        white-space: nowrap;
+      }
+    }
+
+    &__group-select {
+      font-size: 0.7rem;
+      padding: 4px 6px;
+    }
+  }
+}

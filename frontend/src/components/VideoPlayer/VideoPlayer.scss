@@ -110,3 +110,25 @@
     width: 80px;
   }
 }
+
+/* Portrait: scale video down to fit, allowing black bars */
+@media (max-width: 768px) and (orientation: portrait) {
+  .myvideo {
+    object-fit: contain !important;
+  }
+
+  .intermission-video {
+    object-fit: contain;
+  }
+}
+
+/* Landscape: fill the screen */
+@media (max-width: 768px) and (orientation: landscape) {
+  .myvideo {
+    object-fit: cover !important;
+  }
+
+  .intermission-video {
+    object-fit: cover;
+  }
+}

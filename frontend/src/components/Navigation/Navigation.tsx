@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaUserCircle, FaBars } from "react-icons/fa";
+import { FaUserCircle } from "react-icons/fa";
 import Logo from "../../assets/cinezoo_logo_neon_7.svg";
 import "./Navigation.scss";
 import ChannelArrow from "../../assets/down_arrow_02_13.svg"
+import FastForwardIcon from "../../assets/fast_forward_icon.svg"
 import TvGuide from "../../assets/tv_guide_icon_02_13.svg"
 import Fullscreen from "../../assets/fullscreen_icon.svg"
 import Mute from "../../assets/mute_icon.svg"
@@ -231,11 +232,11 @@ const SearchNavBar: React.FC<NavBarProps> = ({
       {/* Mobile: Hamburger Menu Button */}
       {isMobile && (
         <button
-          className="search-navbar__hamburger"
+          className={`search-navbar__hamburger ${isMenuOpen ? 'open' : ''}`}
           onClick={() => setIsMenuOpen?.(!isMenuOpen)}
           aria-label="Toggle menu"
         >
-          <FaBars size={20} />
+          <img src={FastForwardIcon} alt="Toggle Menu" />
         </button>
       )}
 

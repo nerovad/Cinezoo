@@ -534,17 +534,28 @@
     &__hamburger {
       background: transparent;
       border: none;
-      color: $primary-color;
       padding: 0.5rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: transform 0.2s ease-in-out;
+      transition: transform 0.12s ease-in-out, filter 0.12s ease-in-out;
       flex-shrink: 0;
 
       &:hover {
-        transform: scale(1.1);
+        transform: scale(1.2);
+        filter: drop-shadow(0 0 8px $primary-color) brightness(1.2);
+      }
+
+      img {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.3s ease-in-out;
+        transform: rotate(180deg);
+      }
+
+      &.open img {
+        transform: rotate(0deg);
       }
     }
 
@@ -648,7 +659,7 @@
   }
 }
 
-/* Hamburger button - hidden on desktop, shown on mobile */
+/* Menu toggle arrow - hidden on desktop, shown on mobile */
 .search-navbar__hamburger {
   display: none;
 }
