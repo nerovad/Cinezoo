@@ -147,8 +147,80 @@ export async function deleteUser(req: AuthRequest, res: Response): Promise<void>
       }
     }
 
-    await pool.query(`DELETE FROM users WHERE id = $1`, [userId]);
-    res.json({ success: true });
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // Get all channels owned by this user
+      const userChannels = await client.query(
+        `SELECT id FROM channels WHERE owner_id = $1`, [userId]
+      );
+      const channelIds = userChannels.rows.map((r: any) => r.id);
+
+      if (channelIds.length > 0) {
+        // Get all sessions in those channels
+        const userSessions = await client.query(
+          `SELECT id FROM sessions WHERE channel_id = ANY($1)`, [channelIds]
+        );
+        const sessionIds = userSessions.rows.map((r: any) => r.id);
+
+        if (sessionIds.length > 0) {
+          // Get all session entries
+          const entries = await client.query(
+            `SELECT id FROM session_entries WHERE session_id = ANY($1)`, [sessionIds]
+          );
+          const entryIds = entries.rows.map((r: any) => r.id);
+
+          if (entryIds.length > 0) {
+            // Clear winner_entry_id refs (no CASCADE on this FK)
+            await client.query(
+              `UPDATE matches SET winner_entry_id = NULL WHERE winner_entry_id = ANY($1)`, [entryIds]
+            );
+            // Delete match_votes for matches in these sessions
+            await client.query(
+              `DELETE FROM match_votes WHERE match_id IN (SELECT id FROM matches WHERE session_id = ANY($1))`, [sessionIds]
+            );
+            // Delete matches
+            await client.query(
+              `DELETE FROM matches WHERE session_id = ANY($1)`, [sessionIds]
+            );
+            // Delete ratings
+            await client.query(
+              `DELETE FROM ratings WHERE session_id = ANY($1)`, [sessionIds]
+            );
+            // Delete ballots
+            await client.query(
+              `DELETE FROM ballots WHERE session_id = ANY($1)`, [sessionIds]
+            );
+            // Delete session entries
+            await client.query(
+              `DELETE FROM session_entries WHERE session_id = ANY($1)`, [sessionIds]
+            );
+          }
+
+          // Delete sessions
+          await client.query(
+            `DELETE FROM sessions WHERE channel_id = ANY($1)`, [channelIds]
+          );
+        }
+
+        // Delete channels
+        await client.query(
+          `DELETE FROM channels WHERE owner_id = $1`, [userId]
+        );
+      }
+
+      // Delete the user (remaining FKs cascade or set null)
+      await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
+
+      await client.query("COMMIT");
+      res.json({ success: true });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     console.error('Delete user error:', error);
     res.status(500).json({ error: "Server error" });
