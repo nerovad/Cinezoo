@@ -348,18 +348,20 @@ const SearchNavBar: React.FC<NavBarProps> = ({
             <button className="mute-button" onClick={toggleMute}>
               <img src={Mute} alt="Mute" />
             </button>
-            <div className="volume-slider-container">
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={volume}
-                onChange={handleVolumeChange}
-                className="volume-slider"
-                style={{ '--volume-pct': volume * 100 } as React.CSSProperties}
-              />
-            </div>
+            {!isMobile && (
+              <div className="volume-slider-container">
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={volume}
+                  onChange={handleVolumeChange}
+                  className="volume-slider"
+                  style={{ '--volume-pct': volume * 100 } as React.CSSProperties}
+                />
+              </div>
+            )}
             <button className="fullscreen-button" onClick={toggleFullscreen}>
               <img src={Fullscreen} alt="Fullscreen" />
             </button>
