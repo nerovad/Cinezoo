@@ -359,22 +359,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
       console.log("[VideoPlayer] Loading video:", videoLinks[idx]);
       setCurrentIndex(idx);
       const link = videoLinks[idx];
+
+      // Auto-unmute when switching away from the initial channel,
+      // unless the user explicitly muted. Must happen BEFORE loadVideo
+      // so that shouldMute evaluates to false inside loadVideo.
+      if (initialLoadRef.current && !userExplicitlyMutedRef.current) {
+        hasUserInteractedRef.current = true;
+        setIsMuted(false);
+        setShowMuteIcon(false);
+      }
+
       loadVideo(link.src);
       setChannelId(link.channel);
       setChannelName(link.channel);
-
-      // Auto-unmute when switching away from the initial channel,
-      // unless the user explicitly muted
-      if (initialLoadRef.current && !userExplicitlyMutedRef.current) {
-        const v = videoRef.current;
-        if (v && v.muted) {
-          v.muted = false;
-          hasUserInteractedRef.current = true;
-          setIsMuted(false);
-          setShowMuteIcon(false);
-        }
-      }
-
       initialLoadRef.current = true;
 
       const hide = setTimeout(() => setChannelName(""), 7000);
