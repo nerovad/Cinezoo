@@ -34,8 +34,8 @@
 .video-container-dboriginals {
   flex: 1; /* Takes remaining space */
   transition: margin-left 0.3s ease-in-out, margin-right 0.3s ease-in-out;
-  margin-left: 40px; /* Default when collapsed */
-  margin-right: 40px; /* Default for right spacing */
+  margin-left: 0; /* No dead space when collapsed */
+  margin-right: 0; /* No dead space when collapsed */
 
   &.expanded-left {
     margin-left: 250px; /* When menu opens */
