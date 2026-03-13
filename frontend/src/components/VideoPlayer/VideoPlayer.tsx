@@ -126,7 +126,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
       console.log("[loadVideo] Loading MP4, attaching ended listener");
       v.src = src;
       attachEndedForMp4();
-      if (shouldMute) v.muted = true;
+      v.muted = shouldMute;
       v.play().catch(() => {
         // If play fails unmuted, mute and retry (browser policy)
         v.muted = true;
@@ -169,7 +169,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
       hls.attachMedia(v);
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        if (shouldMute) v.muted = true;
+        v.muted = shouldMute;
         v.play().catch(() => {
           v.muted = true;
           setIsMuted(true);
@@ -208,7 +208,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     const vtag = videoRef.current;
     if (vtag?.canPlayType("application/vnd.apple.mpegurl")) {
       vtag.src = src;
-      if (shouldMute) vtag.muted = true;
+      vtag.muted = shouldMute;
       vtag.play().catch(() => {
         vtag.muted = true;
         setIsMuted(true);
