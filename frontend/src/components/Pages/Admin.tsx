@@ -42,6 +42,8 @@ const Admin: React.FC = () => {
   const [editForm, setEditForm] = useState({ name: "", display_name: "", channel_number: "" });
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+  const [confirmDeleteUserId, setConfirmDeleteUserId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!user || user.userGroup !== "super_admin") {
@@ -90,6 +92,27 @@ const Admin: React.FC = () => {
       setError(err.message);
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const deleteUser = async (userId: number) => {
+    setDeletingUserId(userId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete user");
+      }
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+      setConfirmDeleteUserId(null);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setDeletingUserId(null);
     }
   };
 
@@ -204,6 +227,7 @@ const Admin: React.FC = () => {
                 <th>Email</th>
                 <th>Group</th>
                 <th>Joined</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -227,6 +251,32 @@ const Admin: React.FC = () => {
                     </select>
                   </td>
                   <td>{new Date(u.created_at).toLocaleDateString()}</td>
+                  <td className="admin-page__actions">
+                    {u.id === user.id ? null : confirmDeleteUserId === u.id ? (
+                      <>
+                        <button
+                          className="admin-page__btn admin-page__btn--confirm-delete"
+                          onClick={() => deleteUser(u.id)}
+                          disabled={deletingUserId === u.id}
+                        >
+                          {deletingUserId === u.id ? "..." : "Confirm"}
+                        </button>
+                        <button
+                          className="admin-page__btn admin-page__btn--cancel"
+                          onClick={() => setConfirmDeleteUserId(null)}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        className="admin-page__btn admin-page__btn--delete"
+                        onClick={() => setConfirmDeleteUserId(u.id)}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

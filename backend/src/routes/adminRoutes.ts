@@ -1,5 +1,5 @@
 import express, { Response, NextFunction } from "express";
-import { listUsers, updateUserGroup, listAllChannels, adminUpdateChannel, adminDeleteChannel } from "../controllers/adminController";
+import { listUsers, updateUserGroup, deleteUser, listAllChannels, adminUpdateChannel, adminDeleteChannel } from "../controllers/adminController";
 import { authenticateToken, requireGroup, AuthRequest } from "../middleware/authMiddleware";
 
 const router = express.Router();
@@ -16,6 +16,11 @@ router.get("/users", (req: AuthRequest, res: Response, next: NextFunction): void
 // PUT /api/admin/users/:userId/group - Update a user's group
 router.put("/users/:userId/group", (req: AuthRequest, res: Response, next: NextFunction): void => {
   updateUserGroup(req, res).catch(next);
+});
+
+// DELETE /api/admin/users/:userId - Delete a user
+router.delete("/users/:userId", (req: AuthRequest, res: Response, next: NextFunction): void => {
+  deleteUser(req, res).catch(next);
 });
 
 // GET /api/admin/channels - List all channels

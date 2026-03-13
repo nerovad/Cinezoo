@@ -117,6 +117,44 @@ export async function listUsers(req: AuthRequest, res: Response): Promise<void> 
   }
 }
 
+export async function deleteUser(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { userId } = req.params;
+
+    // Prevent deleting yourself
+    if (parseInt(userId) === req.user!.id) {
+      res.status(400).json({ error: "Cannot delete your own account" });
+      return;
+    }
+
+    // Prevent deleting the last super_admin
+    const targetResult = await pool.query(
+      `SELECT user_group FROM users WHERE id = $1`,
+      [userId]
+    );
+    if (targetResult.rows.length === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    if (targetResult.rows[0].user_group === 'super_admin') {
+      const countResult = await pool.query(
+        `SELECT COUNT(*) FROM users WHERE user_group = 'super_admin' AND id != $1`,
+        [userId]
+      );
+      if (parseInt(countResult.rows[0].count) === 0) {
+        res.status(400).json({ error: "Cannot delete the last super_admin" });
+        return;
+      }
+    }
+
+    await pool.query(`DELETE FROM users WHERE id = $1`, [userId]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
 export async function updateUserGroup(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { userId } = req.params;
