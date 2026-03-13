@@ -339,16 +339,16 @@ const SearchNavBar: React.FC<NavBarProps> = ({
 
           <span className="control-pill__divider" />
 
-          <div
-            className={`control-pill__group control-pill__group--volume ${showVolumeSlider ? 'control-pill__group--volume-open' : ''}`}
-            ref={volumeGroupRef}
-            onMouseEnter={handleVolumeMouseEnter}
-            onMouseLeave={handleVolumeMouseLeave}
-          >
-            <button className="mute-button" onClick={toggleMute}>
-              <img src={Mute} alt="Mute" />
-            </button>
-            {!isMobile && (
+          {!isMobile && (
+            <div
+              className={`control-pill__group control-pill__group--volume ${showVolumeSlider ? 'control-pill__group--volume-open' : ''}`}
+              ref={volumeGroupRef}
+              onMouseEnter={handleVolumeMouseEnter}
+              onMouseLeave={handleVolumeMouseLeave}
+            >
+              <button className="mute-button" onClick={toggleMute}>
+                <img src={Mute} alt="Mute" />
+              </button>
               <div className="volume-slider-container">
                 <input
                   type="range"
@@ -361,11 +361,12 @@ const SearchNavBar: React.FC<NavBarProps> = ({
                   style={{ '--volume-pct': volume * 100 } as React.CSSProperties}
                 />
               </div>
-            )}
-            <button className="fullscreen-button" onClick={toggleFullscreen}>
-              <img src={Fullscreen} alt="Fullscreen" />
-            </button>
-          </div>
+            </div>
+          )}
+
+          <button className="fullscreen-button" onClick={toggleFullscreen}>
+            <img src={Fullscreen} alt="Fullscreen" />
+          </button>
         </div>
       </div>
 
