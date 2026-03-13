@@ -43,6 +43,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
   const navigate = useNavigate();
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const endedListenerRef = useRef<(() => void) | null>(null);
   const switchingRef = useRef(false);
@@ -262,9 +263,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
   };
 
   const toggleFullscreen = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (!document.fullscreenElement) v.requestFullscreen().catch(() => { });
+    const el = containerRef.current;
+    if (!el) return;
+    if (!document.fullscreenElement) el.requestFullscreen().catch(() => { });
     else document.exitFullscreen().catch(() => { });
   };
 
@@ -427,7 +428,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
 
   return (
     <div className={`video-container-dboriginals ${getClassNames()}`}>
-      <div className="tv-container">
+      <div className="tv-container" ref={containerRef}>
         <video
           className="myvideo"
           ref={videoRef}
@@ -461,11 +462,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
         <div className="db-originals-next-button" onClick={goToNextVideo}>
           <div className="channelnumber">{channelName}</div>
         </div>
+        {showMuteIcon && !showIntermission && <img src={muteIcon} alt="Muted" className="mute-icon-overlay" onClick={(e) => { e.stopPropagation(); toggleMute(); }} />}
       </div>
 
       <Chatbox isOpen={isChatOpen} setIsOpen={() => { }} />
-
-      {showMuteIcon && !showIntermission && <img src={muteIcon} alt="Muted" className="mute-icon-overlay" onClick={(e) => { e.stopPropagation(); toggleMute(); }} />}
     </div>
   );
 };
