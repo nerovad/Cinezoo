@@ -4,17 +4,28 @@ import "../../styles/_variables.scss";
 
 const NewsTicker: React.FC = () => {
   const tickerRef = useRef<HTMLDivElement>(null);
-  const [duration, setDuration] = useState(30);
+  const singleRef = useRef<HTMLSpanElement>(null);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [copyCount, setCopyCount] = useState(4);
+  const [animStyle, setAnimStyle] = useState<React.CSSProperties>({});
 
   const tickerText = `Welcome to CineZoo! | Click anywhere on screen to navigate channels | Need to contact us? Email us as cinezoo@gmail.com | Oscars watch along with be on channel 7 this year, March 16th at 4:00 PM PST | Check out channel 99 for Friday Night Rewind: Live!`;
 
   useEffect(() => {
-    if (!isMinimized && tickerRef.current) {
-      const singleTextWidth = tickerRef.current.scrollWidth / 2;
+    if (!isMinimized && singleRef.current) {
+      const singleWidth = singleRef.current.offsetWidth;
+      const viewportWidth = window.innerWidth;
+      // Need enough copies so that one copy's worth of scrolling still leaves text visible
+      const needed = Math.max(Math.ceil(viewportWidth / singleWidth) + 2, 3);
+      setCopyCount(needed);
+
       const pixelsPerSecond = 30;
-      const calculatedDuration = singleTextWidth / pixelsPerSecond;
-      setDuration(calculatedDuration);
+      const duration = singleWidth / pixelsPerSecond;
+      setAnimStyle({
+        animationDuration: `${duration}s`,
+        animationDelay: `${-duration * 0.75}s`,
+        '--copy-count': needed,
+      } as React.CSSProperties);
     }
   }, [isMinimized]);
 
@@ -45,10 +56,13 @@ const NewsTicker: React.FC = () => {
           <div
             className="ticker"
             ref={tickerRef}
-            style={{ animationDuration: `${duration}s`, animationDelay: `${-duration * 0.75}s` }}
+            style={animStyle}
           >
-            <span>{tickerText}&nbsp;&nbsp;&nbsp;</span>
-            <span>{tickerText}&nbsp;&nbsp;&nbsp;</span>
+            {Array.from({ length: copyCount }, (_, i) => (
+              <span key={i} ref={i === 0 ? singleRef : undefined}>
+                {tickerText}&nbsp;&nbsp;&nbsp;
+              </span>
+            ))}
           </div>
         </div>
       )}
