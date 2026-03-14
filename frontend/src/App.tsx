@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./store/AuthContext";
 import { useUIStore } from "./store/useUIStore";
-import { useIsMobile } from "./hooks/useIsMobile";
+import { useIsMobile, useIsPortrait } from "./hooks/useIsMobile";
 import NavBar from "./components/Navigation/Navigation.tsx";
 import NewsTicker from "./components/NewsTicker/NewsTicker.tsx";
 import TvGuide from "./components/TvGuide/TvGuide.tsx";
@@ -30,6 +30,9 @@ const MainLayout: React.FC<{
   setAuthMode: React.Dispatch<React.SetStateAction<"login" | "register">>;
   channelSlug?: string;
   isMobile: boolean;
+  isMobilePortrait: boolean;
+  mobilePanel: 'chat' | 'pit';
+  setMobilePanel: React.Dispatch<React.SetStateAction<'chat' | 'pit'>>;
 }> = ({
   isMenuOpen,
   isChatOpen,
@@ -41,7 +44,10 @@ const MainLayout: React.FC<{
   setIsAuthOpen,
   setAuthMode,
   channelSlug,
-  isMobile
+  isMobile,
+  isMobilePortrait,
+  mobilePanel,
+  setMobilePanel,
 }) => (
     <>
       <NavBar
@@ -51,24 +57,45 @@ const MainLayout: React.FC<{
         isMobile={isMobile}
         isMenuOpen={isMenuOpen}
         setIsMenuOpen={setIsMenuOpen}
+        isMobilePortrait={isMobilePortrait}
+        mobilePanel={mobilePanel}
+        setMobilePanel={setMobilePanel}
         {...videoControls}
       />
-      <div className={`main-content ${isMobile ? 'mobile' : ''}`}>
-        <Channels isOpen={isMenuOpen} setIsOpen={setIsMenuOpen} isMobile={isMobile} />
+      <div className={`main-content ${isMobile ? 'mobile' : ''} ${isMobilePortrait ? 'mobile-portrait' : ''}`}>
+        {/* Desktop / mobile landscape: Menu sidebar on left */}
+        {!isMobilePortrait && (
+          <Channels isOpen={isMenuOpen} setIsOpen={setIsMenuOpen} isMobile={isMobile} />
+        )}
 
         <VideoPlayer
-          isMenuOpen={isMenuOpen}
-          isChatOpen={isChatOpen}
+          isMenuOpen={isMobilePortrait ? false : isMenuOpen}
+          isChatOpen={isMobilePortrait ? false : isChatOpen}
           setVideoControls={videoControls.setVideoControls}
-          channelSlug={channelSlug} // ✅ Pass channel slug to VideoPlayer
+          channelSlug={channelSlug}
           isMobile={isMobile}
         />
-        <Chatbox isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
+
+        {/* Desktop / mobile landscape: Chat sidebar on right */}
+        {!isMobilePortrait && (
+          <Chatbox isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
+        )}
+
+        {/* Mobile portrait: panel below video */}
+        {isMobilePortrait && (
+          <div className="mobile-panel-container">
+            {mobilePanel === 'chat' ? (
+              <Chatbox isOpen={true} setIsOpen={setIsChatOpen} mobileInline={true} />
+            ) : (
+              <Channels isOpen={true} setIsOpen={() => setMobilePanel('chat')} isMobile={true} mobileInline={true} />
+            )}
+          </div>
+        )}
       </div>
       <NewsTicker />
 
-      {/* Mobile menu backdrop */}
-      {isMobile && isMenuOpen && (
+      {/* Mobile menu backdrop (landscape only) */}
+      {isMobile && !isMobilePortrait && isMenuOpen && (
         <div className="menu-backdrop" onClick={() => setIsMenuOpen(false)} />
       )}
 
@@ -78,6 +105,8 @@ const MainLayout: React.FC<{
 
 const App: React.FC = () => {
   const isMobile = useIsMobile();
+  const isPortrait = useIsPortrait();
+  const isMobilePortrait = isMobile && isPortrait;
   const { setIsMobile } = useUIStore();
 
   // Sync mobile state to store
@@ -88,6 +117,9 @@ const App: React.FC = () => {
   // Start with sidebars closed on mobile, open on desktop
   const [isMenuOpen, setIsMenuOpen] = useState(!isMobile);
   const [isChatOpen, setIsChatOpen] = useState(!isMobile);
+
+  // Mobile portrait: which panel is shown below the video
+  const [mobilePanel, setMobilePanel] = useState<'chat' | 'pit'>('chat');
   const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   // Auto-close sidebars when switching to mobile
@@ -137,6 +169,9 @@ const App: React.FC = () => {
                 videoControls={videoControls}
                 channelSlug={undefined}
                 isMobile={isMobile}
+                isMobilePortrait={isMobilePortrait}
+                mobilePanel={mobilePanel}
+                setMobilePanel={setMobilePanel}
               />
             }
           />

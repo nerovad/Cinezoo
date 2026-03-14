@@ -23,6 +23,17 @@
     width: 0;
     overflow: hidden;
   }
+
+  /* Mobile portrait inline mode — fills panel below video */
+  &.mobile-inline {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100% !important;
+    height: 100% !important;
+    box-shadow: none;
+    z-index: auto;
+  }
 }
 
 .toggle-button-right {
@@ -69,12 +80,23 @@
   opacity: 0;
   transform: translateX(10px);
   transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-  
+
   &.open {
     display: flex;
     flex-direction: column;
     opacity: 1;
     transform: translateX(0);
+  }
+
+  /* In mobile inline mode, reduce header spacing */
+  .mobile-inline & {
+    height: 100%;
+
+    h3 {
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+      font-size: 1.2rem;
+    }
   }
 
   h3 {

@@ -14,9 +14,10 @@ const socket = io(SOCKET_URL, {
 interface ChatboxProps {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  mobileInline?: boolean;
 }
 
-const Chatbox: React.FC<ChatboxProps> = ({ isOpen, setIsOpen }) => {
+const Chatbox: React.FC<ChatboxProps> = ({ isOpen, setIsOpen, mobileInline = false }) => {
   const { channelId, userId, setUserId, messages, setMessages, addMessage } = useChatStore();
   const [message, setMessage] = useState("");
   const [isConnected, setIsConnected] = useState(false);
@@ -155,13 +156,16 @@ const Chatbox: React.FC<ChatboxProps> = ({ isOpen, setIsOpen }) => {
   };
 
   return (
-    <div className={`chatbox-container ${isOpen ? "open" : ""}`}>
-      <button
-        className={`toggle-button-right ${isOpen ? "open" : ""}`}
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <img src={FastForwardIcon} alt="Toggle Chat" />
-      </button>
+    <div className={`chatbox-container ${isOpen ? "open" : ""} ${mobileInline ? "mobile-inline" : ""}`}>
+      {/* Hide toggle arrow in mobile portrait inline mode */}
+      {!mobileInline && (
+        <button
+          className={`toggle-button-right ${isOpen ? "open" : ""}`}
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <img src={FastForwardIcon} alt="Toggle Chat" />
+        </button>
+      )}
 
       <div className={`chatbox-content ${isOpen ? "open" : ""}`}>
         <h3>Live Chat</h3>

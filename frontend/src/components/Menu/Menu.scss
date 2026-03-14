@@ -45,7 +45,23 @@ $lava-purple-accent: rgba(color.adjust($primary-color, $lightness: 15%), 0.3);
       overflow-y: auto;
       box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
     }
+  }
 
+  /* Mobile portrait inline mode — fills panel below video */
+  &.mobile-inline {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100% !important;
+    height: 100% !important;
+    transform: none !important;
+    box-shadow: none;
+    z-index: auto;
+    overflow-y: auto;
+
+    .utilities-menu h3 {
+      margin-top: 0.5rem;
+    }
   }
 }
 

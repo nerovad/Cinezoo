@@ -62,6 +62,9 @@ interface NavBarProps {
 
   // Mobile props
   isMobile?: boolean;
+  isMobilePortrait?: boolean;
+  mobilePanel?: 'chat' | 'pit';
+  setMobilePanel?: React.Dispatch<React.SetStateAction<'chat' | 'pit'>>;
 }
 
 const SearchNavBar: React.FC<NavBarProps> = ({
@@ -78,9 +81,14 @@ const SearchNavBar: React.FC<NavBarProps> = ({
   setIsAuthOpen,
   setAuthMode,
   isMobile = false,
+  isMobilePortrait = false,
+  mobilePanel = 'chat',
+  setMobilePanel,
 }) => {
   const navigate = useNavigate();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showHamburger, setShowHamburger] = useState(false);
+  const hamburgerRef = useRef<HTMLDivElement>(null);
   const [channelInput, setChannelInput] = useState("");
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -182,6 +190,9 @@ const SearchNavBar: React.FC<NavBarProps> = ({
       if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
         setShowSearchDropdown(false);
       }
+      if (hamburgerRef.current && !hamburgerRef.current.contains(event.target as Node)) {
+        setShowHamburger(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -256,8 +267,39 @@ const SearchNavBar: React.FC<NavBarProps> = ({
 
   return (
     <div className={`search-navbar ${isMobile ? 'search-navbar--mobile' : ''}`}>
-      {/* Mobile: spacer where hamburger used to be — menu toggle is now in Menu.tsx */}
-      {isMobile && <div style={{ width: 20 }} />}
+      {/* Mobile portrait: hamburger menu for panel switching */}
+      {isMobilePortrait && (
+        <div className="hamburger-menu" ref={hamburgerRef}>
+          <button
+            className={`hamburger-button ${showHamburger ? 'open' : ''}`}
+            onClick={() => setShowHamburger(!showHamburger)}
+            aria-label="Toggle panel menu"
+          >
+            <span className="hamburger-line" />
+            <span className="hamburger-line" />
+            <span className="hamburger-line" />
+          </button>
+          {showHamburger && (
+            <div className="hamburger-dropdown">
+              <button
+                className={`hamburger-dropdown__item ${mobilePanel === 'chat' ? 'active' : ''}`}
+                onClick={() => { setMobilePanel?.('chat'); setShowHamburger(false); }}
+              >
+                Live Chat
+              </button>
+              <button
+                className={`hamburger-dropdown__item ${mobilePanel === 'pit' ? 'active' : ''}`}
+                onClick={() => { setMobilePanel?.('pit'); setShowHamburger(false); }}
+              >
+                The Pit
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Mobile landscape: spacer */}
+      {isMobile && !isMobilePortrait && <div style={{ width: 20 }} />}
 
       {/* Left Logo - hidden on mobile */}
       {!isMobile && (

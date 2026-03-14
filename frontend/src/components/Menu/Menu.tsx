@@ -33,6 +33,7 @@ interface UtilitiesProps {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isMobile?: boolean;
+  mobileInline?: boolean;
 }
 
 /* === TYPES === */
@@ -276,7 +277,7 @@ const FilmGrid: React.FC<{
   );
 };
 
-const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = false }) => {
+const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = false, mobileInline = false }) => {
   const [activeModal, setActiveModal] = useState<ModalKind>(null);
   const toggleMenu = () => setIsOpen(!isOpen);
   const navigate = useNavigate();
@@ -487,17 +488,19 @@ const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = fal
   return (
     <>
       {/* === SIDEBAR === */}
-      {/* Toggle button outside container so mobile transform doesn't hide it */}
-      <button className={`toggle-button-left ${isOpen ? "open" : ""}`} onClick={toggleMenu}>
-        <img src={RewindIcon} alt="Toggle" />
-      </button>
+      {/* Toggle button — hidden in mobile portrait inline mode */}
+      {!mobileInline && (
+        <button className={`toggle-button-left ${isOpen ? "open" : ""}`} onClick={toggleMenu}>
+          <img src={RewindIcon} alt="Toggle" />
+        </button>
+      )}
 
-      <div className={`utilities-container ${isOpen ? "open" : ""} ${isMobile ? "mobile" : ""}`}>
+      <div className={`utilities-container ${isOpen ? "open" : ""} ${isMobile ? "mobile" : ""} ${mobileInline ? "mobile-inline" : ""}`}>
         <div className="lava-lamp-bg"></div>
 
         <div className={`utilities-menu ${isOpen ? "open" : ""}`}>
-          {/* Mobile close button */}
-          {isMobile && (
+          {/* Mobile close button — only in sidebar mode, not inline */}
+          {isMobile && !mobileInline && (
             <button className="mobile-close-button" onClick={() => setIsOpen(false)} aria-label="Close menu">
               ×
             </button>
