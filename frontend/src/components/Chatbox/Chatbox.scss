@@ -33,6 +33,25 @@
     height: 100% !important;
     box-shadow: none;
     z-index: auto;
+    overflow: hidden;
+
+    .chatbox-content {
+      overflow: hidden;
+
+      .messages {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+      }
+
+      input {
+        flex-shrink: 0;
+      }
+
+      .chat-button {
+        flex-shrink: 0;
+      }
+    }
   }
 }
 

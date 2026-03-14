@@ -83,15 +83,16 @@
 /* Mobile portrait: video on top, panel below */
 .main-content.mobile-portrait {
   flex-direction: column;
-  height: calc(100vh - 50px);
+  height: calc(100dvh - 50px - var(--ticker-height, 50px));
   overflow: hidden;
 
   .video-container-dboriginals {
     flex: 0 0 auto;
     height: 56.25vw; /* 16:9 aspect ratio */
-    max-height: 40vh;
+    max-height: 35dvh;
     width: 100% !important;
     margin: 0 !important;
+    min-height: 0;
   }
 
   .mobile-panel-container {
