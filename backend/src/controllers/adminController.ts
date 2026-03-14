@@ -223,7 +223,7 @@ export async function deleteUser(req: AuthRequest, res: Response): Promise<void>
     }
   } catch (error) {
     console.error('Delete user error:', error);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: (error as any)?.message || "Server error" });
   }
 }
 
