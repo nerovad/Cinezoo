@@ -122,7 +122,7 @@ export async function deleteUser(req: AuthRequest, res: Response): Promise<void>
     const { userId } = req.params;
 
     // Prevent deleting yourself
-    if (parseInt(userId) === req.user!.id) {
+    if (parseInt(userId) === req.userId) {
       res.status(400).json({ error: "Cannot delete your own account" });
       return;
     }
