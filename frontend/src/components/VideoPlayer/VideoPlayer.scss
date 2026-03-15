@@ -120,6 +120,11 @@
 
 /* Portrait: scale video down to fit, allowing black bars */
 @media (max-width: 768px) and (orientation: portrait) {
+  .video-container-dboriginals {
+    top: 0;
+    height: 100%;
+  }
+
   .myvideo {
     object-fit: contain !important;
   }
