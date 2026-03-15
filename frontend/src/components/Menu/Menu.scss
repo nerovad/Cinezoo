@@ -65,6 +65,13 @@ $lava-purple-accent: rgba(color.adjust($primary-color, $lightness: 15%), 0.3);
   }
 }
 
+/* Hide menu arrow in mobile portrait */
+@media (max-width: 768px) and (orientation: portrait) {
+  .toggle-button-left {
+    display: none !important;
+  }
+}
+
 .toggle-button-left {
   position: fixed;
   top: 60px;

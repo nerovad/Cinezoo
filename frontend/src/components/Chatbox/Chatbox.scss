@@ -55,6 +55,13 @@
   }
 }
 
+/* Hide chatbox arrow in mobile portrait */
+@media (max-width: 768px) and (orientation: portrait) {
+  .toggle-button-right {
+    display: none !important;
+  }
+}
+
 .toggle-button-right {
   position: fixed;
   top: 60px;
