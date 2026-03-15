@@ -83,7 +83,12 @@
 /* Mobile portrait: video on top, panel below */
 .main-content.mobile-portrait {
   flex-direction: column;
-  height: calc(100dvh - 50px - var(--ticker-height, 50px));
+  position: fixed;
+  top: 50px;
+  bottom: var(--ticker-height, 28px);
+  left: 0;
+  right: 0;
+  height: auto;
   overflow: hidden;
 
   .video-container-dboriginals {
