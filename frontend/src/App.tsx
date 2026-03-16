@@ -130,6 +130,24 @@ const App: React.FC = () => {
     }
   }, [isMobile]);
 
+  // Auto-fullscreen on mobile landscape, exit on portrait
+  useEffect(() => {
+    if (!isMobile) return;
+
+    if (!isPortrait) {
+      // Mobile landscape → enter fullscreen
+      const el = document.querySelector('.tv-container') as HTMLElement;
+      if (el && !document.fullscreenElement) {
+        el.requestFullscreen().catch(() => { });
+      }
+    } else {
+      // Mobile portrait → exit fullscreen
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => { });
+      }
+    }
+  }, [isMobile, isPortrait]);
+
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
 

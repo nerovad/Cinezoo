@@ -80,6 +80,28 @@
   }
 }
 
+/* Mobile landscape: auto-fullscreen fallback (hides chrome when Fullscreen API is unavailable) */
+@media (max-width: 768px) and (orientation: landscape),
+       (orientation: landscape) and (max-height: 500px) {
+  .search-navbar {
+    display: none !important;
+  }
+
+  .news-ticker {
+    display: none !important;
+  }
+
+  .main-content {
+    height: 100vh !important;
+    height: 100dvh !important;
+  }
+
+  .video-container-dboriginals {
+    height: 100vh !important;
+    height: 100dvh !important;
+  }
+}
+
 /* Mobile portrait: video on top, panel below */
 .main-content.mobile-portrait {
   flex-direction: column;
