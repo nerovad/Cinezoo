@@ -20,7 +20,10 @@
 .ticker-wrapper {
   overflow: hidden;
   width: 100%;
-  position: relative;
+}
+
+.ticker-item {
+  white-space: nowrap;
 }
 
 .ticker-toggle {
@@ -48,13 +51,6 @@
     padding: 2px 12px;
     font-size: 12px;
   }
-}
-
-.ticker {
-  display: inline-flex;
-  white-space: nowrap;
-  animation: scroll linear infinite;
-  will-change: transform;
 }
 
 @media (max-width: 768px) {
@@ -91,9 +87,4 @@
       padding: 1px 8px;
     }
   }
-}
-
-@keyframes scroll {
-  from { transform: translateX(0); }
-  to { transform: translateX(calc(-100% / var(--copy-count))); }
 }
