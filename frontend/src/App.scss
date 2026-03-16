@@ -80,7 +80,7 @@
   }
 }
 
-/* Mobile landscape: auto-fullscreen fallback (hides chrome when Fullscreen API is unavailable) */
+/* Mobile landscape: auto-fullscreen (hides all chrome, video fills screen) */
 @media (max-width: 768px) and (orientation: landscape),
        (orientation: landscape) and (max-height: 500px) {
   .search-navbar {
@@ -91,12 +91,18 @@
     display: none !important;
   }
 
+  .toggle-button-left,
+  .toggle-button-right {
+    display: none !important;
+  }
+
   .main-content {
     height: 100vh !important;
     height: 100dvh !important;
   }
 
   .video-container-dboriginals {
+    top: 0 !important;
     height: 100vh !important;
     height: 100dvh !important;
   }
