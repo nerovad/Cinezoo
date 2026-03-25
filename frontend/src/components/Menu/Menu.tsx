@@ -28,6 +28,12 @@ type TrendingChannel = {
   viewers: number;
 };
 
+type OGChannel = {
+  slug: string;
+  name: string;
+  created_at: string;
+};
+
 /* === PROPS === */
 interface UtilitiesProps {
   isOpen: boolean;
@@ -288,6 +294,30 @@ const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = fal
   // Trending channels via socket viewer counts
   const [trending, setTrending] = useState<TrendingChannel[]>([]);
 
+  // OG Channels – top 5 longest-running channels by creation date
+  const [ogChannels, setOgChannels] = useState<OGChannel[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/channels");
+        if (!res.ok) return;
+        const data = await res.json();
+        const sorted = [...data]
+          .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+          .slice(0, 5)
+          .map((ch: any) => ({
+            slug: ch.slug,
+            name: ch.display_name || ch.name || ch.slug,
+            created_at: ch.created_at,
+          }));
+        setOgChannels(sorted);
+      } catch {
+        // silently ignore
+      }
+    })();
+  }, []);
+
   useEffect(() => {
     const sock = io(SOCKET_URL, {
       withCredentials: true,
@@ -538,6 +568,28 @@ const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = fal
                     <span className="trending-rank">{i + 1}</span>
                     <span className="trending-name">{ch.name}</span>
                     <span className="trending-viewers">{formatViewers(ch.viewers)} watching</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* OG Channels – longest running */}
+          {ogChannels.length > 0 && (
+            <div className="trending-channels og-channels">
+              <h4>OG Channels</h4>
+              <ul>
+                {ogChannels.map((ch, i) => (
+                  <li
+                    key={ch.slug}
+                    className={ch.slug === channelId ? "active" : ""}
+                    onClick={() => navigate(`/channel/${ch.slug}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && navigate(`/channel/${ch.slug}`)}
+                  >
+                    <span className="trending-rank">{i + 1}</span>
+                    <span className="trending-name">{ch.name}</span>
                   </li>
                 ))}
               </ul>
