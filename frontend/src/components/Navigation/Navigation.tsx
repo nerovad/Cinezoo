@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaUserCircle } from "react-icons/fa";
+import { FaShuffle } from "react-icons/fa6";
 import Logo from "../../assets/cinezoo_logo_neon_7.svg";
 import "./Navigation.scss";
 import ChannelArrow from "../../assets/down_arrow_02_13.svg"
@@ -405,6 +406,27 @@ const SearchNavBar: React.FC<NavBarProps> = ({
               </div>
             </div>
           )}
+
+          <span className="control-pill__divider" />
+
+          <button
+            className="shuffle-button"
+            onClick={() => {
+              if (videoLinks.length <= 1) return;
+              let randomIndex: number;
+              do {
+                randomIndex = Math.floor(Math.random() * videoLinks.length);
+              } while (randomIndex === currentIndex);
+              const channel = videoLinks[randomIndex];
+              setCurrentIndex(randomIndex);
+              loadVideo(channel.src);
+              setChannelId(channel.channel);
+              navigate(`/channel/${channel.channel}`, { replace: true });
+            }}
+            aria-label="Shuffle to random channel"
+          >
+            <FaShuffle />
+          </button>
 
           <button className="fullscreen-button" onClick={toggleFullscreen}>
             <img src={Fullscreen} alt="Fullscreen" />

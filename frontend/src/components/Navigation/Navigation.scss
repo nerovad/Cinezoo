@@ -238,8 +238,9 @@
     }
   }
 
-  // Mute and Fullscreen Buttons
+  // Mute, Shuffle, and Fullscreen Buttons
   .mute-button,
+  .shuffle-button,
   .fullscreen-button {
     background-color: transparent;
     border: none;
@@ -264,6 +265,13 @@
     img {
       height: 28px;
       width: auto;
+      display: block;
+    }
+
+    svg {
+      height: 22px;
+      width: 22px;
+      color: #af63ff;
       display: block;
     }
   }
@@ -701,12 +709,18 @@
       }
     }
 
+    .shuffle-button,
     .fullscreen-button {
       padding: 4px;
 
       img {
         height: 18px;
         width: auto;
+      }
+
+      svg {
+        height: 16px;
+        width: 16px;
       }
     }
 
