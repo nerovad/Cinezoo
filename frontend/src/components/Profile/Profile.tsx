@@ -673,7 +673,6 @@ const Profile: React.FC = () => {
       <AnalyticsModal
         isOpen={!!analyticsChannel}
         onClose={() => setAnalyticsChannel(null)}
-        channelId={analyticsChannel?.id || ""}
         apiUrl={analyticsChannel ? `/api/channels/${analyticsChannel.id}/analytics` : ""}
       />
 

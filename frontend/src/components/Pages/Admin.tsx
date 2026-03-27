@@ -467,7 +467,6 @@ const Admin: React.FC = () => {
       <AnalyticsModal
         isOpen={analyticsChannelId !== null}
         onClose={() => setAnalyticsChannelId(null)}
-        channelId={analyticsChannelId || ""}
         apiUrl={analyticsChannelId ? `/api/admin/channels/${analyticsChannelId}/analytics` : ""}
       />
     </div>

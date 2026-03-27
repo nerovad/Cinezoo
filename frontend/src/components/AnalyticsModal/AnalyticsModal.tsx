@@ -44,11 +44,10 @@ interface AnalyticsData {
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  channelId: string | number;
   apiUrl: string; // e.g. "/api/channels/123/analytics" or "/api/admin/channels/123/analytics"
 }
 
-const AnalyticsModal: React.FC<Props> = ({ isOpen, onClose, channelId, apiUrl }) => {
+const AnalyticsModal: React.FC<Props> = ({ isOpen, onClose, apiUrl }) => {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
