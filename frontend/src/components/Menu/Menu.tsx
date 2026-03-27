@@ -5,6 +5,7 @@ import "./Menu.scss";
 import RewindIcon from "../../assets/rewind_icon.svg";
 import { SOCKET_URL } from "../../config";
 import { useChatStore } from "../../store/useChatStore";
+import { useAuth } from "../../store/AuthContext";
 import TournamentBracket from "./TournamentBracket";
 import AboutWidget from "./AboutWidget";
 import NowPlayingWidget from "./NowPlayingWidget";
@@ -296,6 +297,54 @@ const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = fal
 
   // OG Channels – top 5 longest-running channels by creation date
   const [ogChannels, setOgChannels] = useState<OGChannel[]>([]);
+
+  // Saved Channels
+  const { token, isAuthenticated } = useAuth();
+  const [savedChannels, setSavedChannels] = useState<{ slug: string; name: string }[]>([]);
+  const [savingChannel, setSavingChannel] = useState(false);
+
+  const isCurrentChannelSaved = savedChannels.some((ch) => ch.slug === channelId);
+
+  // Fetch saved channels
+  useEffect(() => {
+    if (!isAuthenticated || !token) { setSavedChannels([]); return; }
+    (async () => {
+      try {
+        const res = await fetch("/api/saved-channels", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) setSavedChannels(await res.json());
+      } catch { /* ignore */ }
+    })();
+  }, [isAuthenticated, token]);
+
+  const toggleSaveChannel = async () => {
+    if (!isAuthenticated || !token || !channelId || savingChannel) return;
+    setSavingChannel(true);
+    try {
+      if (isCurrentChannelSaved) {
+        const res = await fetch(`/api/saved-channels/${encodeURIComponent(channelId)}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) setSavedChannels((prev) => prev.filter((ch) => ch.slug !== channelId));
+      } else {
+        if (savedChannels.length >= 5) { setSavingChannel(false); return; }
+        const res = await fetch(`/api/saved-channels/${encodeURIComponent(channelId)}`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          // Re-fetch to get correct name from server
+          const listRes = await fetch("/api/saved-channels", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (listRes.ok) setSavedChannels(await listRes.json());
+        }
+      }
+    } catch { /* ignore */ }
+    setSavingChannel(false);
+  };
 
   useEffect(() => {
     (async () => {
@@ -593,6 +642,51 @@ const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = fal
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {/* Saved Channels */}
+          {isAuthenticated && (
+            <div className="trending-channels saved-channels">
+              <h4>
+                Saved Channels
+                <button
+                  className={`save-star-btn ${isCurrentChannelSaved ? "saved" : ""}`}
+                  onClick={toggleSaveChannel}
+                  disabled={savingChannel || !channelId || (!isCurrentChannelSaved && savedChannels.length >= 5)}
+                  title={
+                    !channelId
+                      ? "Navigate to a channel first"
+                      : isCurrentChannelSaved
+                      ? "Unsave this channel"
+                      : savedChannels.length >= 5
+                      ? "Max 5 saved channels"
+                      : "Save this channel"
+                  }
+                  aria-label={isCurrentChannelSaved ? "Unsave channel" : "Save channel"}
+                >
+                  ★
+                </button>
+              </h4>
+              {savedChannels.length > 0 ? (
+                <ul>
+                  {savedChannels.map((ch, i) => (
+                    <li
+                      key={ch.slug}
+                      className={ch.slug === channelId ? "active" : ""}
+                      onClick={() => navigate(`/channel/${ch.slug}`)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && navigate(`/channel/${ch.slug}`)}
+                    >
+                      <span className="trending-rank">{i + 1}</span>
+                      <span className="trending-name">{ch.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="saved-empty">No saved channels yet.</p>
+              )}
             </div>
           )}
 

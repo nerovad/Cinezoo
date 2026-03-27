@@ -20,6 +20,7 @@ import awardRoutes from "./routes/awardRoutes";
 import companyRoutes from "./routes/companyRoutes";
 import tournamentRoutes from "./routes/tournamentRoutes";
 import adminRoutes from "./routes/adminRoutes";
+import savedChannelRoutes from "./routes/savedChannelRoutes";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
@@ -61,6 +62,7 @@ app.use("/api/companies", companyRoutes);
 app.use("/api", tournamentRoutes);
 app.use("/api/rtmp", rtmpRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/saved-channels", savedChannelRoutes);
 
 // Error Handler
 app.use(errorHandler);
