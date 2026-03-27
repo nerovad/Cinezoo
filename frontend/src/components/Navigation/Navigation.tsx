@@ -418,9 +418,6 @@ const SearchNavBar: React.FC<NavBarProps> = ({
                 randomIndex = Math.floor(Math.random() * videoLinks.length);
               } while (randomIndex === currentIndex);
               const channel = videoLinks[randomIndex];
-              setCurrentIndex(randomIndex);
-              loadVideo(channel.src);
-              setChannelId(channel.channel);
               navigate(`/channel/${channel.channel}`, { replace: true });
             }}
             aria-label="Shuffle to random channel"
