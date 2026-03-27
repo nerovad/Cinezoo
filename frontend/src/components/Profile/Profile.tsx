@@ -6,6 +6,7 @@ import Messages from "./Messages";
 import EditChannelModal from "../EditChannelModal/EditChannelModal";
 import EventModal from "../EventModal/EventModal";
 import TournamentConsole from "./TournamentConsole";
+import AnalyticsModal from "../AnalyticsModal/AnalyticsModal";
 import { useApi } from "../../utils/useApi";
 import Logo from "../../assets/cinezoo_logo_neon_7.svg";
 
@@ -111,6 +112,9 @@ const Profile: React.FC = () => {
 
   // Tournament Console modal state
   const [tournamentConsoleChannel, setTournamentConsoleChannel] = useState<Channel | null>(null);
+
+  // Analytics modal state
+  const [analyticsChannel, setAnalyticsChannel] = useState<Channel | null>(null);
 
   // Pull channels from your store if available
   const storeChannels = useMemo(() => {
@@ -532,6 +536,12 @@ const Profile: React.FC = () => {
                         )}
 
                         <button
+                          className="btn"
+                          onClick={() => setAnalyticsChannel(ch)}
+                        >
+                          Analytics
+                        </button>
+                        <button
                           className="btn danger"
                           onClick={() => handleDeleteChannel(ch.id, ch.display_name || ch.name)}
                           disabled={deletingChannelId === ch.id}
@@ -658,6 +668,13 @@ const Profile: React.FC = () => {
             ));
           }
         }}
+      />
+
+      <AnalyticsModal
+        isOpen={!!analyticsChannel}
+        onClose={() => setAnalyticsChannel(null)}
+        channelId={analyticsChannel?.id || ""}
+        apiUrl={analyticsChannel ? `/api/channels/${analyticsChannel.id}/analytics` : ""}
       />
 
       {/* Tournament Console Modal */}

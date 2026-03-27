@@ -9,6 +9,7 @@ import {
   getMyChannels,
   getChannelSchedule,
   updateChannelSchedule,
+  getChannelAnalytics,
 } from "../controllers/channelController";
 import { listFilmsForChannel } from "../controllers/filmController";
 import { authenticateToken, requireGroup, AuthRequest } from "../middleware/authMiddleware";
@@ -18,6 +19,11 @@ const router = express.Router();
 // GET /api/channels/mine - MUST be before /:slug to avoid conflicts
 router.get("/mine", authenticateToken, (req: AuthRequest, res: Response, next: NextFunction): void => {
   getMyChannels(req, res).catch(next);
+});
+
+// GET /api/channels/:channelId/analytics - Get channel analytics (owner only)
+router.get("/:channelId(\\d+)/analytics", authenticateToken, (req: AuthRequest, res: Response, next: NextFunction): void => {
+  getChannelAnalytics(req, res).catch(next);
 });
 
 // POST /api/channels - requires super_admin or network group

@@ -217,6 +217,74 @@
     }
   }
 
+  &__btn--analytics {
+    border-color: rgba($accent-secondary-color, 0.5);
+    color: $accent-secondary-color;
+
+    &:hover {
+      background: rgba($accent-secondary-color, 0.15);
+    }
+  }
+
+  &__section--analytics {
+    margin-top: 2rem;
+  }
+
+  &__analytics-search {
+    margin-bottom: 1rem;
+
+    .admin-page__edit-input {
+      width: 100%;
+      max-width: 400px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+    }
+  }
+
+  &__analytics-results {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  &__analytics-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba($background-color-secondary, 0.4);
+    border: 1px solid rgba($primary-color, 0.15);
+    border-radius: 6px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: $primary-font-family;
+    font-size: 0.85rem;
+    color: $text-color-primary;
+    text-align: left;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: rgba($accent-secondary-color, 0.5);
+      background: rgba($accent-secondary-color, 0.08);
+    }
+
+    &-name {
+      font-weight: 600;
+      flex: 1;
+    }
+
+    &-num {
+      color: $primary-color;
+      font-size: 0.75rem;
+    }
+
+    &-owner {
+      color: $text-color-secondary;
+      font-size: 0.75rem;
+    }
+  }
+
   &__group-select {
     background: rgba($background-color-primary, 0.8);
     color: $text-color-primary;

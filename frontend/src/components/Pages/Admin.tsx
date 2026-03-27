@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth, UserGroup } from "../../store/AuthContext";
 import { useNavigate } from "react-router-dom";
+import AnalyticsModal from "../AnalyticsModal/AnalyticsModal";
 import "./Admin.scss";
 
 interface UserRow {
@@ -44,6 +45,10 @@ const Admin: React.FC = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
   const [confirmDeleteUserId, setConfirmDeleteUserId] = useState<number | null>(null);
+
+  // Analytics state
+  const [analyticsChannelId, setAnalyticsChannelId] = useState<number | null>(null);
+  const [analyticsSearch, setAnalyticsSearch] = useState("");
 
   useEffect(() => {
     if (!user || user.userGroup !== "super_admin") {
@@ -390,6 +395,12 @@ const Admin: React.FC = () => {
                           Edit
                         </button>
                         <button
+                          className="admin-page__btn admin-page__btn--analytics"
+                          onClick={() => setAnalyticsChannelId(ch.id)}
+                        >
+                          Analytics
+                        </button>
+                        <button
                           className="admin-page__btn admin-page__btn--delete"
                           onClick={() => setConfirmDeleteId(ch.id)}
                         >
@@ -404,6 +415,61 @@ const Admin: React.FC = () => {
           </table>
         )}
       </section>
+      <section className="admin-page__section admin-page__section--analytics">
+        <h2>Channel Analytics</h2>
+        <p className="admin-page__description">
+          Search for a channel by name to view its analytics.
+        </p>
+        <div className="admin-page__analytics-search">
+          <input
+            className="admin-page__edit-input"
+            type="text"
+            placeholder="Search channels..."
+            value={analyticsSearch}
+            onChange={(e) => setAnalyticsSearch(e.target.value)}
+          />
+        </div>
+        {analyticsSearch.length > 0 && (
+          <div className="admin-page__analytics-results">
+            {channels
+              .filter((ch) => {
+                const q = analyticsSearch.toLowerCase();
+                return (
+                  ch.name.toLowerCase().includes(q) ||
+                  (ch.display_name || "").toLowerCase().includes(q) ||
+                  ch.slug.toLowerCase().includes(q) ||
+                  (ch.owner_name || "").toLowerCase().includes(q)
+                );
+              })
+              .map((ch) => (
+                <button
+                  key={ch.id}
+                  className="admin-page__analytics-item"
+                  onClick={() => setAnalyticsChannelId(ch.id)}
+                >
+                  <span className="admin-page__analytics-item-name">
+                    {ch.display_name || ch.name}
+                  </span>
+                  {ch.channel_number && (
+                    <span className="admin-page__analytics-item-num">
+                      Ch. {ch.channel_number}
+                    </span>
+                  )}
+                  <span className="admin-page__analytics-item-owner">
+                    {ch.owner_name || "No owner"}
+                  </span>
+                </button>
+              ))}
+          </div>
+        )}
+      </section>
+
+      <AnalyticsModal
+        isOpen={analyticsChannelId !== null}
+        onClose={() => setAnalyticsChannelId(null)}
+        channelId={analyticsChannelId || ""}
+        apiUrl={analyticsChannelId ? `/api/admin/channels/${analyticsChannelId}/analytics` : ""}
+      />
     </div>
   );
 };

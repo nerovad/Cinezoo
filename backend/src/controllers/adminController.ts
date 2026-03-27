@@ -1,6 +1,7 @@
 import { Response } from "express";
 import pool from "../db/pool";
 import { AuthRequest, UserGroup } from "../middleware/authMiddleware";
+import { buildChannelAnalytics } from "./channelController";
 
 const VALID_GROUPS: UserGroup[] = ['super_admin', 'network', 'general_user'];
 
@@ -224,6 +225,30 @@ export async function deleteUser(req: AuthRequest, res: Response): Promise<void>
   } catch (error) {
     console.error('Delete user error:', error);
     res.status(500).json({ error: (error as any)?.message || "Server error" });
+  }
+}
+
+export async function adminGetChannelAnalytics(req: AuthRequest, res: Response): Promise<void> {
+  const { channelId } = req.params;
+  try {
+    const chResult = await pool.query(
+      `SELECT c.id, c.display_name, c.name, c.channel_number, c.created_at, c.owner_id,
+              u.username as owner_name
+       FROM channels c
+       LEFT JOIN users u ON c.owner_id = u.id
+       WHERE c.id = $1`,
+      [channelId]
+    );
+    if (chResult.rows.length === 0) {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    const channel = chResult.rows[0];
+    const analytics = await buildChannelAnalytics(parseInt(channelId));
+    res.json({ channel, ...analytics });
+  } catch (error) {
+    console.error("Admin channel analytics error:", error);
+    res.status(500).json({ error: "Server error" });
   }
 }
 

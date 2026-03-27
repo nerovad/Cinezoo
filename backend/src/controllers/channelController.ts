@@ -1060,3 +1060,142 @@ export async function updateChannelSchedule(req: Request, res: Response): Promis
     console.log('Database client released');
   }
 }
+
+/* ---------------------- Channel Analytics ---------------------- */
+export async function getChannelAnalytics(req: Request, res: Response): Promise<void> {
+  const uid = authUserIdOr401(req, res);
+  if (!uid) return;
+
+  const { channelId } = req.params;
+
+  try {
+    // Verify ownership
+    const chResult = await pool.query(
+      `SELECT id, display_name, name, channel_number, created_at, first_live_at, owner_id
+       FROM channels WHERE id = $1`,
+      [channelId]
+    );
+    if (chResult.rows.length === 0) {
+      res.status(404).json({ error: "Channel not found" });
+      return;
+    }
+    const channel = chResult.rows[0];
+    if (channel.owner_id !== uid) {
+      res.status(403).json({ error: "Not authorized" });
+      return;
+    }
+
+    const analytics = await buildChannelAnalytics(parseInt(channelId));
+    res.json({ channel, ...analytics });
+  } catch (error) {
+    console.error("Channel analytics error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+}
+
+export async function buildChannelAnalytics(channelId: number) {
+  // Sessions summary
+  const sessionsResult = await pool.query(
+    `SELECT COUNT(*) as total_sessions,
+            COUNT(*) FILTER (WHERE status = 'live') as live_sessions,
+            COUNT(*) FILTER (WHERE status = 'closed' OR status = 'archived') as completed_sessions,
+            MIN(starts_at) as first_session,
+            MAX(starts_at) as latest_session
+     FROM sessions WHERE channel_id = $1`,
+    [channelId]
+  );
+
+  // Total entries (films submitted)
+  const entriesResult = await pool.query(
+    `SELECT COUNT(*) as total_entries
+     FROM session_entries se
+     JOIN sessions s ON se.session_id = s.id
+     WHERE s.channel_id = $1`,
+    [channelId]
+  );
+
+  // Total votes (ballots cast)
+  const ballotsResult = await pool.query(
+    `SELECT COUNT(*) as total_ballots
+     FROM ballots b
+     JOIN sessions s ON b.session_id = s.id
+     WHERE s.channel_id = $1`,
+    [channelId]
+  );
+
+  // Total ratings
+  const ratingsResult = await pool.query(
+    `SELECT COUNT(*) as total_ratings,
+            ROUND(AVG(score), 2) as avg_rating
+     FROM ratings r
+     JOIN sessions s ON r.session_id = s.id
+     WHERE s.channel_id = $1`,
+    [channelId]
+  );
+
+  // Total match votes
+  const matchVotesResult = await pool.query(
+    `SELECT COUNT(*) as total_match_votes
+     FROM match_votes mv
+     JOIN matches m ON mv.match_id = m.id
+     JOIN sessions s ON m.session_id = s.id
+     WHERE s.channel_id = $1`,
+    [channelId]
+  );
+
+  // Chat messages count
+  const messagesResult = await pool.query(
+    `SELECT COUNT(*) as total_messages
+     FROM messages WHERE channel_id = $1`,
+    [channelId]
+  );
+
+  // Schedule items count
+  const scheduleResult = await pool.query(
+    `SELECT COUNT(*) as total_schedule_items
+     FROM channel_schedule WHERE channel_id = $1`,
+    [channelId]
+  );
+
+  // Recent sessions (last 10)
+  const recentSessions = await pool.query(
+    `SELECT id, title, starts_at, ends_at, status, created_at
+     FROM sessions WHERE channel_id = $1
+     ORDER BY starts_at DESC LIMIT 10`,
+    [channelId]
+  );
+
+  // Unique voters (distinct user_ids from ballots)
+  const uniqueVotersResult = await pool.query(
+    `SELECT COUNT(DISTINCT b.user_id) as unique_voters
+     FROM ballots b
+     JOIN sessions s ON b.session_id = s.id
+     WHERE s.channel_id = $1 AND b.user_id IS NOT NULL`,
+    [channelId]
+  );
+
+  return {
+    sessions: {
+      total: parseInt(sessionsResult.rows[0].total_sessions),
+      live: parseInt(sessionsResult.rows[0].live_sessions),
+      completed: parseInt(sessionsResult.rows[0].completed_sessions),
+      first_session: sessionsResult.rows[0].first_session,
+      latest_session: sessionsResult.rows[0].latest_session,
+    },
+    engagement: {
+      total_entries: parseInt(entriesResult.rows[0].total_entries),
+      total_ballots: parseInt(ballotsResult.rows[0].total_ballots),
+      total_ratings: parseInt(ratingsResult.rows[0].total_ratings),
+      avg_rating: ratingsResult.rows[0].avg_rating ? parseFloat(ratingsResult.rows[0].avg_rating) : null,
+      total_match_votes: parseInt(matchVotesResult.rows[0].total_match_votes),
+      unique_voters: parseInt(uniqueVotersResult.rows[0].unique_voters),
+    },
+    chat: {
+      total_messages: parseInt(messagesResult.rows[0].total_messages),
+    },
+    schedule: {
+      total_items: parseInt(scheduleResult.rows[0].total_schedule_items),
+    },
+    recent_sessions: recentSessions.rows,
+  };
+}
