@@ -106,46 +106,50 @@ const SearchNavBar: React.FC<NavBarProps> = ({
   // Sync slider + mute icon with the underlying video element so changes
   // from the M key, in-video overlay, or remote stay reflected here.
   useEffect(() => {
+    if (!videoRef) return;
     let raf = 0;
+    let attached: HTMLVideoElement | null = null;
+    let sync: (() => void) | null = null;
     const attach = () => {
       const v = videoRef.current;
       if (!v) {
         raf = requestAnimationFrame(attach);
         return;
       }
-      const sync = () => {
+      attached = v;
+      sync = () => {
         setVolume(v.volume);
         setIsMuted(v.muted);
         if (v.volume > 0) previousVolumeRef.current = v.volume;
       };
       sync();
       v.addEventListener("volumechange", sync);
-      return () => v.removeEventListener("volumechange", sync);
     };
-    const cleanup = attach();
+    attach();
     return () => {
       if (raf) cancelAnimationFrame(raf);
-      if (typeof cleanup === "function") cleanup();
+      if (attached && sync) attached.removeEventListener("volumechange", sync);
     };
   }, [videoRef]);
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
     const v = videoRef.current;
-    if (!v) {
-      setVolume(newVolume);
-      return;
-    }
+    if (!v) return;
     v.volume = newVolume;
     if (newVolume > 0) {
       previousVolumeRef.current = newVolume;
-      // Routing through toggleMute clears userExplicitlyMutedRef in VideoPlayer
-      // so channel switches resume auto-unmute behavior.
-      if (v.muted) toggleMute();
+      if (v.muted) {
+        // Clear the mute flag directly so channel switches still auto-unmute,
+        // and update local state so the icon swaps without waiting for the event.
+        v.muted = false;
+        setIsMuted(false);
+      }
     } else {
-      // Sliding to 0: silence without marking the user as "explicitly muted",
-      // so switching channels can still auto-unmute when they raise volume again.
+      // Sliding to 0 silences without marking the user as "explicitly muted".
       v.muted = true;
+      setIsMuted(true);
     }
   };
 
