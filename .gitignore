@@ -13,6 +13,8 @@ mobile/dist/
 *.orig.*
 
 *.mp4
+*.wav
+*.mp3
 
 # Shared build output
 shared/dist/
