@@ -53,7 +53,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
   const hasUserInteractedRef = useRef(false);
   const userExplicitlyMutedRef = useRef(false);
   const goToNextVideoRef = useRef<(() => void) | null>(null);
-  const introCompleteRef = useRef(false);
 
   const { setChannelId } = useChatStore();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -64,6 +63,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [videoLinks, setVideoLinks] = useState<VideoLink[]>([
     { src: "/videos/Color_Bars_DB_Web.mp4", channel: "channel-0", channelNumber: 0, isLive: false },
+    { src: INTRO_VIDEO_SRC, channel: "channel-1", channelNumber: 1, isLive: false },
   ]);
 
   const getClassNames = () => {
@@ -99,17 +99,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     const v = videoRef.current;
     if (!v) return;
     const onEnded = () => {
-      const currentSrc = videoRef.current?.currentSrc ?? "";
-      if (!introCompleteRef.current) {
-        if (currentSrc.includes("Color_Bars")) {
-          console.log("[attachEndedForMp4] Color bars ended, playing intro");
-          loadVideo(INTRO_VIDEO_SRC);
-          return;
-        }
-        if (currentSrc.includes("0001-0250")) {
-          introCompleteRef.current = true;
-        }
-      }
       console.log("[attachEndedForMp4] Video ended, calling goToNextVideo");
       if (goToNextVideoRef.current) {
         goToNextVideoRef.current();
@@ -243,7 +232,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
       return;
     }
     switchingRef.current = true;
-    introCompleteRef.current = true;
 
     const safeIdx = ((idx % videoLinks.length) + videoLinks.length) % videoLinks.length;
     const dest = videoLinks[safeIdx];
@@ -348,7 +336,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
 
         if (alive) {
           setVideoLinks(prev => {
-            const updated = [prev[0], ...dynamic];
+            const updated = [prev[0], prev[1], ...dynamic];
             console.log("Final videoLinks array:", updated); // ⬅️ ADD THIS
             return updated;
           });
@@ -386,9 +374,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     // Load video if: 1) switching to a different channel, OR 2) initial load
     if (idx !== -1 && (idx !== currentIndex || !initialLoadRef.current)) {
       console.log("[VideoPlayer] Loading video:", videoLinks[idx]);
-      // If the user lands directly on any channel other than the color-bars
-      // entry (index 0), skip the intro chain entirely.
-      if (idx !== 0) introCompleteRef.current = true;
       setCurrentIndex(idx);
       const link = videoLinks[idx];
 
@@ -403,7 +388,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
 
       loadVideo(link.src);
       setChannelId(link.channel);
-      setChannelName(link.channel);
+      // The intro slot is meant to feel like part of the boot sequence,
+      // not a real channel — keep its slug out of the overlay.
+      const overlayName = link.channel === "channel-1" ? "" : link.channel;
+      setChannelName(overlayName);
       initialLoadRef.current = true;
 
       const hide = setTimeout(() => setChannelName(""), 7000);
