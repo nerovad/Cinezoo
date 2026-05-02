@@ -37,7 +37,7 @@ interface VideoPlayerProps {
 }
 
 const HLS_BASE = "https://cinezoo.tv:8088";
-const INTRO_VIDEO_SRC = "/videos/0001-0250.mp4";
+const INTRO_VIDEO_SRC = "/videos/CinezooIntro.mp4";
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVideoControls, isMobile = false }) => {
   const { channelSlug } = useParams<{ channelSlug: string }>();
