@@ -283,6 +283,20 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     checkVideo();
   }, []);
 
+  // Mirror the video element's muted state into the overlay icon, so any
+  // path that flips muted (slider, M key, remote, programmatic) stays in sync.
+  useEffect(() => {
+    if (!isVideoReady) return;
+    const v = videoRef.current;
+    if (!v) return;
+    const sync = () => {
+      setIsMuted(v.muted);
+      setShowMuteIcon(v.muted);
+    };
+    v.addEventListener("volumechange", sync);
+    return () => v.removeEventListener("volumechange", sync);
+  }, [isVideoReady]);
+
 
   // ✅ Fetch channels
   // ✅ Fetch channels

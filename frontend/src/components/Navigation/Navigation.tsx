@@ -1,13 +1,12 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaUserCircle } from "react-icons/fa";
+import { FaUserCircle, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
 import { FaShuffle } from "react-icons/fa6";
 import Logo from "../../assets/cinezoo_logo_neon_7.svg";
 import "./Navigation.scss";
 import ChannelArrow from "../../assets/down_arrow_02_13.svg"
 import TvGuide from "../../assets/tv_guide_icon_02_13.svg"
 import Fullscreen from "../../assets/fullscreen_icon.svg"
-import Mute from "../../assets/mute_icon.svg"
 import { useChatStore } from "../../store/useChatStore";
 import { useAuth } from "../../store/AuthContext";
 
@@ -96,22 +95,75 @@ const SearchNavBar: React.FC<NavBarProps> = ({
   const [selectedResultIndex, setSelectedResultIndex] = useState(0);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(true);
+  const previousVolumeRef = useRef(1);
   const volumeGroupRef = useRef<HTMLDivElement>(null);
   const volumeHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const { setChannelId } = useChatStore();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
 
+  // Sync slider + mute icon with the underlying video element so changes
+  // from the M key, in-video overlay, or remote stay reflected here.
+  useEffect(() => {
+    let raf = 0;
+    const attach = () => {
+      const v = videoRef.current;
+      if (!v) {
+        raf = requestAnimationFrame(attach);
+        return;
+      }
+      const sync = () => {
+        setVolume(v.volume);
+        setIsMuted(v.muted);
+        if (v.volume > 0) previousVolumeRef.current = v.volume;
+      };
+      sync();
+      v.addEventListener("volumechange", sync);
+      return () => v.removeEventListener("volumechange", sync);
+    };
+    const cleanup = attach();
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      if (typeof cleanup === "function") cleanup();
+    };
+  }, [videoRef]);
+
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVolume = parseFloat(e.target.value);
-    setVolume(newVolume);
-    if (videoRef.current) {
-      videoRef.current.volume = newVolume;
-      if (newVolume > 0 && videoRef.current.muted) {
-        toggleMute();
-      } else if (newVolume === 0 && !videoRef.current.muted) {
-        toggleMute();
+    const v = videoRef.current;
+    if (!v) {
+      setVolume(newVolume);
+      return;
+    }
+    v.volume = newVolume;
+    if (newVolume > 0) {
+      previousVolumeRef.current = newVolume;
+      // Routing through toggleMute clears userExplicitlyMutedRef in VideoPlayer
+      // so channel switches resume auto-unmute behavior.
+      if (v.muted) toggleMute();
+    } else {
+      // Sliding to 0: silence without marking the user as "explicitly muted",
+      // so switching channels can still auto-unmute when they raise volume again.
+      v.muted = true;
+    }
+  };
+
+  const handleMuteClick = () => {
+    const v = videoRef.current;
+    if (!v) {
+      toggleMute();
+      return;
+    }
+    const effectivelySilent = v.muted || v.volume === 0;
+    if (effectivelySilent) {
+      if (v.volume === 0) {
+        const restore = previousVolumeRef.current > 0 ? previousVolumeRef.current : 1;
+        v.volume = restore;
       }
+      if (v.muted) toggleMute();
+    } else {
+      toggleMute();
     }
   };
 
@@ -389,8 +441,12 @@ const SearchNavBar: React.FC<NavBarProps> = ({
               onMouseEnter={handleVolumeMouseEnter}
               onMouseLeave={handleVolumeMouseLeave}
             >
-              <button className="mute-button" onClick={toggleMute}>
-                <img src={Mute} alt="Mute" />
+              <button
+                className="mute-button"
+                onClick={handleMuteClick}
+                aria-label={isMuted || volume === 0 ? "Unmute" : "Mute"}
+              >
+                {isMuted || volume === 0 ? <FaVolumeMute /> : <FaVolumeUp />}
               </button>
               <div className="volume-slider-container">
                 <input
