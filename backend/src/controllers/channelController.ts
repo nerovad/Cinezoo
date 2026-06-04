@@ -454,6 +454,7 @@ export async function getChannel(req: Request, res: Response, next: NextFunction
     const { rows } = await pool.query(
       `select c.id, c.slug, c.name, c.stream_url, c.stream_key, c.ingest_app, c.playback_path,
               c.display_name, c.channel_number, c.widgets, c.about_text, c.first_live_at, c.thumbnail, c.intermission_url, c.created_at,
+              c.owner_id, c.contribution_policy,
               u.username as owner_name
        from channels c
        left join users u on c.owner_id = u.id
@@ -501,7 +502,12 @@ export async function updateChannel(req: Request, res: Response, next: NextFunct
   if (!uid) return;
 
   const channelId = req.params.id;
-  const { display_name, description, event, films, widgets, about_text, first_live_at, thumbnail, intermission } = req.body;
+  const { display_name, description, event, films, widgets, about_text, first_live_at, thumbnail, intermission, contribution_policy } = req.body;
+
+  if (contribution_policy && !["open", "invite", "closed"].includes(contribution_policy)) {
+    res.status(400).json({ error: "contribution_policy must be 'open', 'invite', or 'closed'" });
+    return;
+  }
 
   const client = await pool.connect();
   let begun = false;
@@ -539,10 +545,11 @@ export async function updateChannel(req: Request, res: Response, next: NextFunct
            about_text = COALESCE($4, about_text),
            first_live_at = COALESCE($5, first_live_at),
            thumbnail = COALESCE($7, thumbnail),
-           intermission_url = COALESCE($8, intermission_url)
+           intermission_url = COALESCE($8, intermission_url),
+           contribution_policy = COALESCE($9, contribution_policy)
        WHERE id = $6
        RETURNING *`,
-      [display_name, description, widgets ? JSON.stringify(widgets) : null, about_text, first_live_at, channelId, thumbnailUrl, intermissionUrl]
+      [display_name, description, widgets ? JSON.stringify(widgets) : null, about_text, first_live_at, channelId, thumbnailUrl, intermissionUrl, contribution_policy ?? null]
     );
 
     // Handle event creation if provided (same logic as createChannel)

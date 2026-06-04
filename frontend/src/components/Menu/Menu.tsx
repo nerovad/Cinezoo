@@ -9,6 +9,7 @@ import { useAuth } from "../../store/AuthContext";
 import TournamentBracket from "./TournamentBracket";
 import AboutWidget from "./AboutWidget";
 import NowPlayingWidget from "./NowPlayingWidget";
+import ContributionsWidget from "./ContributionsWidget";
 
 /* === VIEWER COUNT FORMATTING === */
 // <100: exact number (single digits e.g. 1, 23, 99)
@@ -44,7 +45,7 @@ interface UtilitiesProps {
 }
 
 /* === TYPES === */
-type ModalKind = null | "ballot" | "battle" | "bracket" | "leaderboard" | "about" | "now_playing";
+type ModalKind = null | "ballot" | "battle" | "bracket" | "leaderboard" | "about" | "now_playing" | "contributions";
 
 type Film = {
   id: string;
@@ -534,6 +535,11 @@ const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = fal
       key: "now_playing",
       name: "Now Playing",
       description: "See what's on right now."
+    },
+    contributions: {
+      key: "contributions",
+      name: "Contributions",
+      description: "Pitch a film to this channel's schedule."
     }
   };
 
@@ -787,6 +793,16 @@ const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = fal
         width={780}
       >
         <NowPlayingWidget channelId={channelId || ""} />
+      </Modal>
+
+      {/* Contributions Widget Modal */}
+      <Modal
+        isOpen={activeModal === "contributions"}
+        onClose={() => setActiveModal(null)}
+        title="🤝 Contributions"
+        width={720}
+      >
+        <ContributionsWidget channelId={channelId || ""} />
       </Modal>
     </>
   );

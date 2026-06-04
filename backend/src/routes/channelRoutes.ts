@@ -12,6 +12,13 @@ import {
   getChannelAnalytics,
 } from "../controllers/channelController";
 import { listFilmsForChannel } from "../controllers/filmController";
+import {
+  createContribution,
+  listChannelContributions,
+  listChannelContributors,
+  addChannelContributor,
+  removeChannelContributor,
+} from "../controllers/contributionController";
 import { authenticateToken, requireGroup, AuthRequest } from "../middleware/authMiddleware";
 
 const router = express.Router();
@@ -63,6 +70,31 @@ router.get("/:slug/schedule", (req: Request, res: Response) => {
 // POST /api/channels/:slug/schedule - Create/update schedule items
 router.post("/:slug/schedule", authenticateToken, (req: AuthRequest, res: Response) => {
   updateChannelSchedule(req, res);
+});
+
+// POST /api/channels/:slug/contributions - pitch a film to this channel
+router.post("/:slug/contributions", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
+  createContribution(req, res, next);
+});
+
+// GET /api/channels/:slug/contributions - owner sees all pitches; others see their own
+router.get("/:slug/contributions", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
+  listChannelContributions(req, res, next);
+});
+
+// GET /api/channels/:slug/contributors - public credits (accepted pitches per user)
+router.get("/:slug/contributors", (req: Request, res: Response, next: NextFunction) => {
+  listChannelContributors(req, res, next);
+});
+
+// POST /api/channels/:slug/contributors - owner adds invitee / trusted contributor
+router.post("/:slug/contributors", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
+  addChannelContributor(req, res, next);
+});
+
+// DELETE /api/channels/:slug/contributors/:userId - owner removes a contributor
+router.delete("/:slug/contributors/:userId(\\d+)", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
+  removeChannelContributor(req, res, next);
 });
 
 // GET /api/channels/:slug (get single channel by slug)

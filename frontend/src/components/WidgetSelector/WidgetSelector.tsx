@@ -7,7 +7,8 @@ export type WidgetType =
   | 'battle_royale'
   | 'tournament_bracket'
   | 'about'
-  | 'now_playing';
+  | 'now_playing'
+  | 'contributions';
 
 export interface WidgetConfig {
   type: WidgetType;
@@ -37,6 +38,13 @@ const ALWAYS_AVAILABLE_WIDGETS: WidgetOption[] = [
     name: 'Now Playing / Up Next',
     description: 'Current and upcoming content',
     icon: '📺',
+    alwaysAvailable: true
+  },
+  {
+    type: 'contributions',
+    name: 'Contributions',
+    description: 'Let viewers pitch films to your schedule',
+    icon: '🤝',
     alwaysAvailable: true
   }
 ];
