@@ -226,23 +226,30 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, onClose, excludeClickId]);
 
-  // ESC, lock scroll, reset to first step + clear stale success view, focus first input
+  // ESC to close + lock body scroll
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    setCurrentStep(0);
-    setSuccess(false);
-    setChannelInfo(null);
-    setCreatedSummary(null);
-    setTimeout(() => firstFieldRef.current?.focus(), 0);
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
     };
   }, [isOpen, onClose]);
+
+  // On open only: reset to first step, clear stale success view, focus first input.
+  // Must NOT depend on onClose — parent re-renders give it a new identity, and
+  // re-running this mid-session wipes the success screen right after submit.
+  useEffect(() => {
+    if (!isOpen) return;
+    setCurrentStep(0);
+    setSuccess(false);
+    setChannelInfo(null);
+    setCreatedSummary(null);
+    setTimeout(() => firstFieldRef.current?.focus(), 0);
+  }, [isOpen]);
 
   const canSubmit = () => {
     return channelNumber && displayName.trim();
