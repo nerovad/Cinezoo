@@ -224,6 +224,11 @@ const EditChannelModal: React.FC<Props> = ({ isOpen, onClose, channel, onUpdate 
           }
         } catch (error) {
           console.error("Error fetching channel data:", error);
+          // Fall back to the channel prop so the form (and Save) still works
+          // when the API is unreachable
+          setDisplayName(channel.display_name || "");
+          setSelectedWidgets(channel.widgets || []);
+          setAboutText(channel.about_text || "");
         }
       };
 
