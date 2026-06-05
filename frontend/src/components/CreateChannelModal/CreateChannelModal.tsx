@@ -826,11 +826,14 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
                 ← Previous
               </button>
               {isLastStep ? (
-                <button type="submit" disabled={submitting || !canSubmit()}>
+                // key forces a fresh DOM node: without it React reuses the Next
+                // button's element and the click's default action submits the form
+                <button key="submit" type="submit" disabled={submitting || !canSubmit()}>
                   {submitting ? "Creating..." : "Create Channel"}
                 </button>
               ) : (
                 <button
+                  key="next"
                   type="button"
                   className="wizard-next-btn"
                   onClick={goNext}
