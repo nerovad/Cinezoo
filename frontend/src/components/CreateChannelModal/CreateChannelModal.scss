@@ -791,6 +791,54 @@
   }
 }
 
+/* === Contribution Policy options === */
+.policy-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.25rem;
+
+  .policy-option {
+    cursor: pointer;
+
+    input[type="radio"] {
+      display: none;
+    }
+
+    .policy-card {
+      padding: 0.75rem 1rem;
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      transition: all 0.2s ease;
+
+      strong {
+        display: block;
+        font-size: 1rem;
+        margin-bottom: 0.2rem;
+        color: $text-color-primary;
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.85rem;
+        color: $text-color-secondary;
+      }
+    }
+
+    &:hover .policy-card {
+      border-color: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    &.selected .policy-card {
+      border-color: $secondary-color;
+      background: rgba($secondary-color, 0.15);
+      box-shadow: 0 0 0 1px $secondary-color;
+    }
+  }
+}
+
 /* === Schedule Editor for Now Playing widget === */
 .schedule-editor {
   margin: 1rem 0;
@@ -1093,6 +1141,194 @@
 
       span {
         color: $secondary-color;
+      }
+    }
+  }
+}
+
+/* === Wizard: step legend === */
+.wizard-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+
+  li {
+    display: flex;
+  }
+
+  .legend-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.8rem 0.35rem 0.4rem;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+    color: $text-color-secondary;
+    font-family: $primary-font-family;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      color: $text-color-secondary;
+      font-size: 0.75rem;
+      font-weight: 700;
+      line-height: 1;
+      transition: all 0.2s ease-in-out;
+    }
+
+    &:hover:not(:disabled):not(.active) {
+      border-color: rgba($secondary-color, 0.5);
+      color: $text-color-primary;
+    }
+
+    &.active {
+      border-color: $secondary-color;
+      background: rgba($secondary-color, 0.15);
+      color: $secondary-color;
+
+      .step-num {
+        background: $secondary-color;
+        color: $background-color-primary;
+      }
+    }
+
+    &.complete:not(.active) .step-num {
+      background: rgba($secondary-color, 0.35);
+      color: $secondary-color;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.wizard-step-hint {
+  margin: 0 0 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: $text-color-secondary;
+  font-style: italic;
+}
+
+/* === Wizard: step content === */
+.wizard-step {
+  min-height: 240px;
+}
+
+/* === Wizard: prev/next/submit navigation === */
+.create-channel-form .wizard-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+  .wizard-progress {
+    font-size: 0.85rem;
+    color: $text-color-secondary;
+    white-space: nowrap;
+  }
+
+  .wizard-nav-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+
+  .wizard-next-btn {
+    padding: 0.55rem 1.5rem;
+    background-color: $primary-color;
+    color: $channel-text-color;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    font-family: $primary-font-family;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    &:hover:not(:disabled) {
+      background-color: color.adjust($primary-color, $lightness: -5%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba($primary-color, 0.3);
+    }
+    &:active { transform: translateY(0); }
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background-color: $text-color-secondary;
+    }
+  }
+
+  /* Submit lives inline in the nav, not full-width */
+  button[type="submit"] {
+    width: auto;
+    margin-top: 0;
+    padding: 0.55rem 1.5rem;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .wizard-legend {
+    gap: 0.3rem;
+
+    .legend-step {
+      padding: 0.25rem 0.6rem 0.25rem 0.3rem;
+      font-size: 0.75rem;
+
+      .step-num {
+        width: 17px;
+        height: 17px;
+        font-size: 0.65rem;
+      }
+    }
+  }
+
+  .wizard-step-hint {
+    font-size: 0.8rem;
+  }
+
+  .wizard-step {
+    min-height: 180px;
+  }
+
+  .create-channel-form .wizard-nav {
+    flex-wrap: wrap;
+
+    .wizard-progress {
+      width: 100%;
+      text-align: center;
+      order: 2;
+    }
+
+    .wizard-nav-buttons {
+      width: 100%;
+      margin-left: 0;
+      order: 1;
+
+      button {
+        flex: 1;
       }
     }
   }

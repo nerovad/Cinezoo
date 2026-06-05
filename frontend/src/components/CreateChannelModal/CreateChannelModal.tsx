@@ -25,6 +25,12 @@ type WidgetConfig = {
   order: number;
 };
 
+type WizardStep = {
+  key: string;
+  label: string;
+  hint: string;
+};
+
 const emptyScheduleItem: ScheduleItem = {
   title: "",
   scheduled_at: "",
@@ -76,11 +82,24 @@ const formatTimecodeInput = (value: string): string => {
 const GENERAL_WIDGETS = [
   { type: 'about', name: 'About', description: 'Channel info and description', icon: 'ℹ️' },
   { type: 'now_playing', name: 'Now Playing / Up Next', description: 'Current and upcoming content', icon: '📺' },
+  { type: 'contributions', name: 'Contributions', description: 'Let viewers pitch films to your schedule', icon: '🤝' },
+];
+
+type ContributionPolicy = 'open' | 'invite' | 'closed';
+
+// Policy options for the Contributions widget (mirrors ContributionsWidget)
+const POLICY_OPTIONS: Array<{ value: ContributionPolicy; label: string; description: string }> = [
+  { value: 'open', label: 'Open', description: 'Anyone can pitch films to your schedule' },
+  { value: 'invite', label: 'Invite Only', description: 'Only contributors you invite can pitch' },
+  { value: 'closed', label: 'Closed', description: 'Not accepting contributions right now' },
 ];
 
 const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated, excludeClickId }) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const firstFieldRef = useRef<HTMLSelectElement>(null);
+
+  // Wizard step navigation
+  const [currentStep, setCurrentStep] = useState(0);
 
   // Channel fields
   const [channelNumber, setChannelNumber] = useState("");
@@ -92,6 +111,7 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
   // Widgets
   const [selectedWidgets, setSelectedWidgets] = useState<WidgetConfig[]>([]);
   const [aboutText, setAboutText] = useState("");
+  const [contributionPolicy, setContributionPolicy] = useState<ContributionPolicy>('open');
 
   // Schedule for Now Playing widget
   const [scheduleItems, setScheduleItems] = useState<ScheduleItem[]>([]);
@@ -165,13 +185,14 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, onClose, excludeClickId]);
 
-  // ESC, lock scroll, focus first input
+  // ESC, lock scroll, reset to first step, focus first input
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    setCurrentStep(0);
     setTimeout(() => firstFieldRef.current?.focus(), 0);
     return () => {
       document.removeEventListener("keydown", onKey);
@@ -197,6 +218,32 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
   const isWidgetSelected = (widgetType: string) => {
     return selectedWidgets.some(w => w.type === widgetType);
   };
+
+  // Wizard steps: conditional steps appear only when their widget is selected
+  const basicsComplete = Boolean(channelNumber && displayName.trim());
+
+  const steps: WizardStep[] = [
+    { key: 'basics', label: 'Basics', hint: 'Pick your channel number and give it a name. That\'s all you need!' },
+    { key: 'branding', label: 'Look & Tags', hint: 'Add tags and artwork to help people find your channel. All optional.' },
+    { key: 'widgets', label: 'Widgets', hint: 'Pick extras for your channel menu. All optional.' },
+    ...(isWidgetSelected('about')
+      ? [{ key: 'about', label: 'About', hint: 'Tell viewers what your channel is about.' }]
+      : []),
+    ...(isWidgetSelected('now_playing')
+      ? [{ key: 'schedule', label: 'Schedule', hint: 'Add time slots so viewers know what\'s on.' }]
+      : []),
+    ...(isWidgetSelected('contributions')
+      ? [{ key: 'contributions', label: 'Contributions', hint: 'Choose who can pitch films to your channel.' }]
+      : []),
+  ];
+
+  const stepIndex = Math.min(currentStep, steps.length - 1);
+  const activeStep = steps[stepIndex];
+  const isLastStep = stepIndex === steps.length - 1;
+
+  const goToStep = (i: number) => setCurrentStep(Math.max(0, Math.min(i, steps.length - 1)));
+  const goPrevious = () => goToStep(stepIndex - 1);
+  const goNext = () => goToStep(stepIndex + 1);
 
   // Schedule helpers
   const addScheduleRow = () => setScheduleItems(prev => [...prev, { ...emptyScheduleItem }]);
@@ -284,6 +331,11 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Pressing Enter on an intermediate step advances instead of submitting
+    if (!isLastStep) {
+      goNext();
+      return;
+    }
     if (!canSubmit()) return;
 
     setSubmitting(true);
@@ -324,6 +376,7 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
         tags: tags.length > 0 ? tags : null,
         thumbnail: thumbnailBase64,
         intermission: intermissionBase64,
+        contribution_policy: isWidgetSelected('contributions') ? contributionPolicy : null,
       };
 
       const token = localStorage.getItem("token");
@@ -350,11 +403,13 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
       setDisplayName("");
       setSelectedWidgets([]);
       setAboutText("");
+      setContributionPolicy('open');
       setScheduleItems([]);
       setTags([]);
       setTagInput("");
       removeThumbnail();
       removeIntermission();
+      setCurrentStep(0);
       setSuccess(true);
 
       // Notify parent
@@ -378,330 +433,414 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
         <h2 id="create-channel-title">Create Channel</h2>
 
         <form className="create-channel-form" onSubmit={handleSubmit}>
-          {/* Channel Number + Display Name Row */}
-          <div className="row channel-name-row">
-            <div className="channel-number-field">
-              <label htmlFor="channel-number">Channel #</label>
-              <select
-                ref={firstFieldRef}
-                id="channel-number"
-                value={channelNumber}
-                onChange={(e) => setChannelNumber(e.target.value)}
-                required
-                disabled={loadingChannels}
-              >
-                <option value="">{loadingChannels ? "..." : "#"}</option>
-                {availableChannels.map(num => (
-                  <option key={num} value={num}>{num}</option>
-                ))}
-              </select>
-              {!loadingChannels && availableChannels.length === 0 && (
-                <small className="form-hint" style={{ color: '#ff6b6b' }}>
-                  All taken
-                </small>
-              )}
-            </div>
-            <div className="display-name-field">
-              <label htmlFor="display-name">Channel Display Name</label>
-              <input
-                id="display-name"
-                type="text"
-                placeholder="e.g., Cinema, Horror Marathon..."
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value.slice(0, 20))}
-                maxLength={20}
-                required
-              />
-              <small className="form-hint">{displayName.length}/20 characters</small>
-            </div>
-          </div>
+          {/* Step legend: click to jump to any step */}
+          <ol className="wizard-legend" aria-label="Form steps">
+            {steps.map((step, i) => (
+              <li key={step.key}>
+                <button
+                  type="button"
+                  className={`legend-step ${i === stepIndex ? 'active' : ''} ${step.key === 'basics' && basicsComplete ? 'complete' : ''}`}
+                  onClick={() => goToStep(i)}
+                  disabled={i > 0 && !basicsComplete}
+                  aria-current={i === stepIndex ? 'step' : undefined}
+                >
+                  <span className="step-num">{step.key === 'basics' && basicsComplete && i !== stepIndex ? '✓' : i + 1}</span>
+                  <span className="step-label">{step.label}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
 
-          {/* Tags */}
-          <div className="row">
-            <label htmlFor="tag-input">Tags</label>
-            <div className="tag-input-container">
-              <input
-                id="tag-input"
-                type="text"
-                placeholder="Type a tag and press Enter..."
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={handleTagKeyDown}
-              />
-              <button
-                type="button"
-                className="btn-secondary small"
-                onClick={() => addTag(tagInput)}
-                disabled={!tagInput.trim()}
-              >
-                Add
-              </button>
-            </div>
-            {tags.length > 0 && (
-              <div className="tags-list">
-                {tags.map(tag => (
-                  <span key={tag} className="tag-chip">
-                    {tag}
+          <p className="wizard-step-hint">{activeStep.hint}</p>
+
+          <div className="wizard-step">
+            {/* Step: Basics — Channel Number + Display Name */}
+            {activeStep.key === 'basics' && (
+              <div className="row channel-name-row">
+                <div className="channel-number-field">
+                  <label htmlFor="channel-number">Channel #</label>
+                  <select
+                    ref={firstFieldRef}
+                    id="channel-number"
+                    value={channelNumber}
+                    onChange={(e) => setChannelNumber(e.target.value)}
+                    required
+                    disabled={loadingChannels}
+                  >
+                    <option value="">{loadingChannels ? "..." : "#"}</option>
+                    {availableChannels.map(num => (
+                      <option key={num} value={num}>{num}</option>
+                    ))}
+                  </select>
+                  {!loadingChannels && availableChannels.length === 0 && (
+                    <small className="form-hint" style={{ color: '#ff6b6b' }}>
+                      All taken
+                    </small>
+                  )}
+                </div>
+                <div className="display-name-field">
+                  <label htmlFor="display-name">Channel Display Name</label>
+                  <input
+                    id="display-name"
+                    type="text"
+                    placeholder="e.g., Cinema, Horror Marathon..."
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value.slice(0, 20))}
+                    maxLength={20}
+                    required
+                  />
+                  <small className="form-hint">{displayName.length}/20 characters</small>
+                </div>
+              </div>
+            )}
+
+            {/* Step: Look & Tags — Tags + Thumbnail + Intermission */}
+            {activeStep.key === 'branding' && (
+              <>
+                {/* Tags */}
+                <div className="row">
+                  <label htmlFor="tag-input">Tags</label>
+                  <div className="tag-input-container">
+                    <input
+                      id="tag-input"
+                      type="text"
+                      placeholder="Type a tag and press Enter..."
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={handleTagKeyDown}
+                    />
                     <button
                       type="button"
-                      className="tag-remove"
-                      onClick={() => removeTag(tag)}
-                      aria-label={`Remove ${tag}`}
+                      className="btn-secondary small"
+                      onClick={() => addTag(tagInput)}
+                      disabled={!tagInput.trim()}
                     >
-                      ×
+                      Add
                     </button>
-                  </span>
-                ))}
-              </div>
-            )}
-            <small className="form-hint">Add tags to help categorize your channel (e.g., horror, comedy, indie)</small>
-          </div>
-
-          {/* Thumbnail Upload */}
-          <div className="row">
-            <label htmlFor="thumbnail-upload">Channel Thumbnail</label>
-            {thumbnailPreview ? (
-              <div className="thumbnail-preview">
-                <img src={thumbnailPreview} alt="Thumbnail preview" />
-                <button
-                  type="button"
-                  className="thumbnail-remove"
-                  onClick={removeThumbnail}
-                  aria-label="Remove thumbnail"
-                >
-                  ×
-                </button>
-              </div>
-            ) : (
-              <div className="thumbnail-upload-area">
-                <input
-                  id="thumbnail-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleThumbnailChange}
-                  className="thumbnail-input"
-                />
-                <label htmlFor="thumbnail-upload" className="thumbnail-upload-label">
-                  <span className="upload-icon">📷</span>
-                  <span>Click to upload thumbnail</span>
-                </label>
-              </div>
-            )}
-            <small className="form-hint">Optional. Recommended size: 320x180 pixels</small>
-          </div>
-
-          {/* Intermission Screen Upload */}
-          <div className="row">
-            <label htmlFor="intermission-upload">Intermission Screen</label>
-            {intermissionPreview ? (
-              <div className="thumbnail-preview">
-                <img src={intermissionPreview} alt="Intermission preview" />
-                <button
-                  type="button"
-                  className="thumbnail-remove"
-                  onClick={removeIntermission}
-                  aria-label="Remove intermission screen"
-                >
-                  x
-                </button>
-              </div>
-            ) : (
-              <div className="thumbnail-upload-area">
-                <input
-                  id="intermission-upload"
-                  type="file"
-                  accept="image/*,video/mp4,video/webm"
-                  onChange={handleIntermissionChange}
-                  className="thumbnail-input"
-                />
-                <label htmlFor="intermission-upload" className="thumbnail-upload-label">
-                  <span className="upload-icon">TV</span>
-                  <span>Upload custom intermission screen</span>
-                </label>
-              </div>
-            )}
-            <small className="form-hint">Optional. Shown when your channel is offline. A default screen is used if none is uploaded. Recommended: 1920x1080</small>
-          </div>
-
-          {/* Widget Selector - General widgets only */}
-          <div className="widget-selector">
-            <h4>Channel Widgets</h4>
-            <p className="help-text">Select which widgets to display in your channel menu.</p>
-
-            <div className="widget-grid">
-              {GENERAL_WIDGETS.map(widget => (
-                <label
-                  key={widget.type}
-                  className={`widget-option ${isWidgetSelected(widget.type) ? 'selected' : ''}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isWidgetSelected(widget.type)}
-                    onChange={() => toggleWidget(widget.type)}
-                  />
-                  <div className="widget-card">
-                    <span className="widget-icon">{widget.icon}</span>
-                    <div className="widget-info">
-                      <strong>{widget.name}</strong>
-                      <p>{widget.description}</p>
-                    </div>
                   </div>
-                </label>
-              ))}
-            </div>
+                  {tags.length > 0 && (
+                    <div className="tags-list">
+                      {tags.map(tag => (
+                        <span key={tag} className="tag-chip">
+                          {tag}
+                          <button
+                            type="button"
+                            className="tag-remove"
+                            onClick={() => removeTag(tag)}
+                            aria-label={`Remove ${tag}`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <small className="form-hint">Add tags to help categorize your channel (e.g., horror, comedy, indie)</small>
+                </div>
 
-            <p className="help-text event-hint">
-              Event widgets (Voting, Leaderboard, Bracket) are automatically added when you create an event.
-            </p>
-          </div>
-
-          {/* About widget textarea (conditional) */}
-          {isWidgetSelected('about') && (
-            <div className="row">
-              <label htmlFor="about-text">About Text (Markdown supported)</label>
-              <textarea
-                id="about-text"
-                value={aboutText}
-                onChange={(e) => setAboutText(e.target.value)}
-                placeholder="Describe your channel... You can use **bold**, _italic_, and [links](https://example.com)"
-                rows={6}
-              />
-            </div>
-          )}
-
-          {/* Now Playing schedule editor (conditional) */}
-          {isWidgetSelected('now_playing') && (
-            <div className="schedule-editor">
-              <div className="schedule-header">
-                <h4>Now Playing / Up Next Schedule</h4>
-                <button type="button" className="btn-secondary small" onClick={addScheduleRow}>
-                  + Add Time Slot
-                </button>
-              </div>
-
-              {scheduleItems.length === 0 ? (
-                <p className="schedule-hint">
-                  Add time slots to show what's playing and coming up next on your channel.
-                </p>
-              ) : (
-                <div className="schedule-table">
-                  {scheduleItems.map((item, idx) => (
-                    <div key={idx} className="schedule-row">
+                {/* Thumbnail Upload */}
+                <div className="row">
+                  <label htmlFor="thumbnail-upload">Channel Thumbnail</label>
+                  {thumbnailPreview ? (
+                    <div className="thumbnail-preview">
+                      <img src={thumbnailPreview} alt="Thumbnail preview" />
                       <button
                         type="button"
-                        className="schedule-remove-btn"
-                        aria-label="Remove time slot"
-                        onClick={() => removeScheduleRow(idx)}
+                        className="thumbnail-remove"
+                        onClick={removeThumbnail}
+                        aria-label="Remove thumbnail"
                       >
-                        ✕
+                        ×
                       </button>
-                      <div className="schedule-fields-grid">
-                        <div className="schedule-field">
-                          <label>Program Title</label>
-                          <input
-                            type="text"
-                            placeholder="e.g., Movie Night"
-                            value={item.title}
-                            onChange={(e) => updateScheduleItem(idx, { title: e.target.value })}
-                          />
-                        </div>
-                        <div className="schedule-field">
-                          <label>Recurrence</label>
-                          <select
-                            value={item.recurrence_type}
-                            onChange={(e) => updateScheduleItem(idx, {
-                              recurrence_type: e.target.value as RecurrenceType,
-                              recurrence_days: e.target.value === 'weekly' ? [] : undefined
-                            })}
-                          >
-                            <option value="once">Once</option>
-                            <option value="daily">Daily</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="weekdays">Weekdays (Mon-Fri)</option>
-                            <option value="weekends">Weekends (Sat-Sun)</option>
-                          </select>
-                        </div>
-                        <div className="schedule-field duration-field">
-                          <label>Duration</label>
-                          <input
-                            type="text"
-                            placeholder="HH:MM:SS"
-                            value={item.duration}
-                            onChange={(e) => {
-                              const formatted = formatTimecodeInput(e.target.value);
-                              updateScheduleItem(idx, { duration: formatted });
-                            }}
-                            title="Format: HH:MM:SS or MM:SS"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Weekly day selector */}
-                      {item.recurrence_type === 'weekly' && (
-                        <div className="recurrence-days">
-                          <label>Days:</label>
-                          <div className="day-checkboxes">
-                            {DAY_LABELS.map((day, dayIdx) => (
-                              <label key={dayIdx} className="day-checkbox">
-                                <input
-                                  type="checkbox"
-                                  checked={item.recurrence_days?.includes(dayIdx) || false}
-                                  onChange={(e) => {
-                                    const days = item.recurrence_days || [];
-                                    const newDays = e.target.checked
-                                      ? [...days, dayIdx].sort()
-                                      : days.filter(d => d !== dayIdx);
-                                    updateScheduleItem(idx, { recurrence_days: newDays });
-                                  }}
-                                />
-                                <span>{day}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="schedule-fields-grid">
-                        <div className="schedule-field">
-                          <label>{item.recurrence_type === 'once' ? 'Air Date & Time' : 'Start Date'}</label>
-                          <input
-                            type={item.recurrence_type === 'once' ? 'datetime-local' : 'date'}
-                            value={item.recurrence_type === 'once' ? item.scheduled_at : item.scheduled_at.split('T')[0]}
-                            onChange={(e) => updateScheduleItem(idx, { scheduled_at: e.target.value })}
-                          />
-                        </div>
-                        {item.recurrence_type !== 'once' && (
-                          <>
-                            <div className="schedule-field">
-                              <label>Air Time</label>
-                              <input
-                                type="time"
-                                value={item.air_time || ''}
-                                onChange={(e) => updateScheduleItem(idx, { air_time: e.target.value })}
-                              />
-                            </div>
-                            <div className="schedule-field">
-                              <label>End Date (optional)</label>
-                              <input
-                                type="date"
-                                value={item.recurrence_end_date || ''}
-                                onChange={(e) => updateScheduleItem(idx, { recurrence_end_date: e.target.value })}
-                              />
-                            </div>
-                          </>
-                        )}
-                      </div>
-
                     </div>
+                  ) : (
+                    <div className="thumbnail-upload-area">
+                      <input
+                        id="thumbnail-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleThumbnailChange}
+                        className="thumbnail-input"
+                      />
+                      <label htmlFor="thumbnail-upload" className="thumbnail-upload-label">
+                        <span className="upload-icon">📷</span>
+                        <span>Click to upload thumbnail</span>
+                      </label>
+                    </div>
+                  )}
+                  <small className="form-hint">Optional. Recommended size: 320x180 pixels</small>
+                </div>
+
+                {/* Intermission Screen Upload */}
+                <div className="row">
+                  <label htmlFor="intermission-upload">Intermission Screen</label>
+                  {intermissionPreview ? (
+                    <div className="thumbnail-preview">
+                      <img src={intermissionPreview} alt="Intermission preview" />
+                      <button
+                        type="button"
+                        className="thumbnail-remove"
+                        onClick={removeIntermission}
+                        aria-label="Remove intermission screen"
+                      >
+                        x
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="thumbnail-upload-area">
+                      <input
+                        id="intermission-upload"
+                        type="file"
+                        accept="image/*,video/mp4,video/webm"
+                        onChange={handleIntermissionChange}
+                        className="thumbnail-input"
+                      />
+                      <label htmlFor="intermission-upload" className="thumbnail-upload-label">
+                        <span className="upload-icon">TV</span>
+                        <span>Upload custom intermission screen</span>
+                      </label>
+                    </div>
+                  )}
+                  <small className="form-hint">Optional. Shown when your channel is offline. A default screen is used if none is uploaded. Recommended: 1920x1080</small>
+                </div>
+              </>
+            )}
+
+            {/* Step: Widgets — General widgets only */}
+            {activeStep.key === 'widgets' && (
+              <div className="widget-selector">
+                <h4>Channel Widgets</h4>
+                <p className="help-text">Select which widgets to display in your channel menu.</p>
+
+                <div className="widget-grid">
+                  {GENERAL_WIDGETS.map(widget => (
+                    <label
+                      key={widget.type}
+                      className={`widget-option ${isWidgetSelected(widget.type) ? 'selected' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isWidgetSelected(widget.type)}
+                        onChange={() => toggleWidget(widget.type)}
+                      />
+                      <div className="widget-card">
+                        <span className="widget-icon">{widget.icon}</span>
+                        <div className="widget-info">
+                          <strong>{widget.name}</strong>
+                          <p>{widget.description}</p>
+                        </div>
+                      </div>
+                    </label>
                   ))}
                 </div>
+
+                <p className="help-text event-hint">
+                  Event widgets (Voting, Leaderboard, Bracket) are automatically added when you create an event.
+                </p>
+              </div>
+            )}
+
+            {/* Step: About widget textarea (conditional) */}
+            {activeStep.key === 'about' && (
+              <div className="row">
+                <label htmlFor="about-text">About Text (Markdown supported)</label>
+                <textarea
+                  id="about-text"
+                  value={aboutText}
+                  onChange={(e) => setAboutText(e.target.value)}
+                  placeholder="Describe your channel... You can use **bold**, _italic_, and [links](https://example.com)"
+                  rows={6}
+                />
+              </div>
+            )}
+
+            {/* Step: Now Playing schedule editor (conditional) */}
+            {activeStep.key === 'schedule' && (
+              <div className="schedule-editor">
+                <div className="schedule-header">
+                  <h4>Now Playing / Up Next Schedule</h4>
+                  <button type="button" className="btn-secondary small" onClick={addScheduleRow}>
+                    + Add Time Slot
+                  </button>
+                </div>
+
+                {scheduleItems.length === 0 ? (
+                  <p className="schedule-hint">
+                    Add time slots to show what's playing and coming up next on your channel.
+                  </p>
+                ) : (
+                  <div className="schedule-table">
+                    {scheduleItems.map((item, idx) => (
+                      <div key={idx} className="schedule-row">
+                        <button
+                          type="button"
+                          className="schedule-remove-btn"
+                          aria-label="Remove time slot"
+                          onClick={() => removeScheduleRow(idx)}
+                        >
+                          ✕
+                        </button>
+                        <div className="schedule-fields-grid">
+                          <div className="schedule-field">
+                            <label>Program Title</label>
+                            <input
+                              type="text"
+                              placeholder="e.g., Movie Night"
+                              value={item.title}
+                              onChange={(e) => updateScheduleItem(idx, { title: e.target.value })}
+                            />
+                          </div>
+                          <div className="schedule-field">
+                            <label>Recurrence</label>
+                            <select
+                              value={item.recurrence_type}
+                              onChange={(e) => updateScheduleItem(idx, {
+                                recurrence_type: e.target.value as RecurrenceType,
+                                recurrence_days: e.target.value === 'weekly' ? [] : undefined
+                              })}
+                            >
+                              <option value="once">Once</option>
+                              <option value="daily">Daily</option>
+                              <option value="weekly">Weekly</option>
+                              <option value="weekdays">Weekdays (Mon-Fri)</option>
+                              <option value="weekends">Weekends (Sat-Sun)</option>
+                            </select>
+                          </div>
+                          <div className="schedule-field duration-field">
+                            <label>Duration</label>
+                            <input
+                              type="text"
+                              placeholder="HH:MM:SS"
+                              value={item.duration}
+                              onChange={(e) => {
+                                const formatted = formatTimecodeInput(e.target.value);
+                                updateScheduleItem(idx, { duration: formatted });
+                              }}
+                              title="Format: HH:MM:SS or MM:SS"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Weekly day selector */}
+                        {item.recurrence_type === 'weekly' && (
+                          <div className="recurrence-days">
+                            <label>Days:</label>
+                            <div className="day-checkboxes">
+                              {DAY_LABELS.map((day, dayIdx) => (
+                                <label key={dayIdx} className="day-checkbox">
+                                  <input
+                                    type="checkbox"
+                                    checked={item.recurrence_days?.includes(dayIdx) || false}
+                                    onChange={(e) => {
+                                      const days = item.recurrence_days || [];
+                                      const newDays = e.target.checked
+                                        ? [...days, dayIdx].sort()
+                                        : days.filter(d => d !== dayIdx);
+                                      updateScheduleItem(idx, { recurrence_days: newDays });
+                                    }}
+                                  />
+                                  <span>{day}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="schedule-fields-grid">
+                          <div className="schedule-field">
+                            <label>{item.recurrence_type === 'once' ? 'Air Date & Time' : 'Start Date'}</label>
+                            <input
+                              type={item.recurrence_type === 'once' ? 'datetime-local' : 'date'}
+                              value={item.recurrence_type === 'once' ? item.scheduled_at : item.scheduled_at.split('T')[0]}
+                              onChange={(e) => updateScheduleItem(idx, { scheduled_at: e.target.value })}
+                            />
+                          </div>
+                          {item.recurrence_type !== 'once' && (
+                            <>
+                              <div className="schedule-field">
+                                <label>Air Time</label>
+                                <input
+                                  type="time"
+                                  value={item.air_time || ''}
+                                  onChange={(e) => updateScheduleItem(idx, { air_time: e.target.value })}
+                                />
+                              </div>
+                              <div className="schedule-field">
+                                <label>End Date (optional)</label>
+                                <input
+                                  type="date"
+                                  value={item.recurrence_end_date || ''}
+                                  onChange={(e) => updateScheduleItem(idx, { recurrence_end_date: e.target.value })}
+                                />
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step: Contribution policy (conditional) */}
+            {activeStep.key === 'contributions' && (
+              <div className="row">
+                <label>Contribution Policy</label>
+                <div className="policy-options">
+                  {POLICY_OPTIONS.map(opt => (
+                    <label
+                      key={opt.value}
+                      className={`policy-option ${contributionPolicy === opt.value ? 'selected' : ''}`}
+                    >
+                      <input
+                        type="radio"
+                        name="contribution-policy"
+                        value={opt.value}
+                        checked={contributionPolicy === opt.value}
+                        onChange={() => setContributionPolicy(opt.value)}
+                      />
+                      <div className="policy-card">
+                        <strong>{opt.label}</strong>
+                        <p>{opt.description}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                <small className="form-hint">You can change this anytime from the Contributions widget on your channel.</small>
+              </div>
+            )}
+          </div>
+
+          {/* Wizard navigation */}
+          <div className="wizard-nav">
+            <span className="wizard-progress">Step {stepIndex + 1} of {steps.length}</span>
+            <div className="wizard-nav-buttons">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={goPrevious}
+                disabled={stepIndex === 0}
+              >
+                ← Previous
+              </button>
+              {isLastStep ? (
+                <button type="submit" disabled={submitting || !canSubmit()}>
+                  {submitting ? "Creating..." : "Create Channel"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="wizard-next-btn"
+                  onClick={goNext}
+                  disabled={activeStep.key === 'basics' && !basicsComplete}
+                >
+                  Next →
+                </button>
               )}
             </div>
-          )}
-
-          <button type="submit" disabled={submitting || !canSubmit()}>
-            {submitting ? "Creating..." : "Create Channel"}
-          </button>
+          </div>
         </form>
 
         {success && <p className="create-channel-message">Channel created successfully!</p>}

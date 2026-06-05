@@ -111,6 +111,7 @@ export async function createChannel(req: Request, res: Response, next: NextFunct
       thumbnail, // Base64 encoded thumbnail image
       intermission, // Base64 encoded intermission screen image
       schedule, // Schedule items for Now Playing / Up Next widget
+      contribution_policy, // 'open' | 'invite' | 'closed' for Contributions widget
     } = req.body as {
       name: string;
       slug?: string;
@@ -152,10 +153,16 @@ export async function createChannel(req: Request, res: Response, next: NextFunct
         recurrence_end_date?: string;
         air_time?: string;
       }>;
+      contribution_policy?: string;
     };
 
     if (!name && !slug) {
       res.status(400).json({ error: "name (or slug) is required" });
+      return;
+    }
+
+    if (contribution_policy && !["open", "invite", "closed"].includes(contribution_policy)) {
+      res.status(400).json({ error: "contribution_policy must be 'open', 'invite', or 'closed'" });
       return;
     }
 
@@ -190,14 +197,16 @@ export async function createChannel(req: Request, res: Response, next: NextFunct
              widgets = COALESCE($6, widgets),
              about_text = COALESCE($7, about_text),
              first_live_at = COALESCE($8, first_live_at),
-             tags = COALESCE($9, tags)
+             tags = COALESCE($9, tags),
+             contribution_policy = COALESCE($10, contribution_policy)
          where id = $1
-         returning id, slug, name, stream_url, stream_key, ingest_app, playback_path, display_name, channel_number, widgets, about_text, first_live_at, tags, created_at`,
+         returning id, slug, name, stream_url, stream_key, ingest_app, playback_path, display_name, channel_number, widgets, about_text, first_live_at, tags, contribution_policy, created_at`,
         [row.id, name ?? row.name, stream_url ?? row.stream_url, display_name ?? row.display_name, channel_number ?? row.channel_number,
          widgets ? JSON.stringify(widgets) : null,
          about_text ?? null,
          first_live_at ?? null,
-         tags && tags.length > 0 ? tags : null]
+         tags && tags.length > 0 ? tags : null,
+         contribution_policy ?? null]
       );
       channel = upd.rows[0];
     } else {
@@ -213,16 +222,17 @@ export async function createChannel(req: Request, res: Response, next: NextFunct
 
       const chResult = await client.query(
         `insert into channels
-           (owner_id, slug, name, stream_url, stream_key, ingest_app, playback_path, display_name, channel_number, widgets, about_text, first_live_at, tags, thumbnail, intermission_url, created_at)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, now())
-         returning id, slug, name, stream_url, stream_key, ingest_app, playback_path, display_name, channel_number, widgets, about_text, first_live_at, tags, thumbnail, intermission_url, created_at`,
+           (owner_id, slug, name, stream_url, stream_key, ingest_app, playback_path, display_name, channel_number, widgets, about_text, first_live_at, tags, thumbnail, intermission_url, contribution_policy, created_at)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16, now())
+         returning id, slug, name, stream_url, stream_key, ingest_app, playback_path, display_name, channel_number, widgets, about_text, first_live_at, tags, thumbnail, intermission_url, contribution_policy, created_at`,
         [uid, slug, name ?? slug, stream_url ?? null, streamKey, ingestApp, playbackPath, display_name ?? null, channel_number ?? null,
          widgets ? JSON.stringify(widgets) : null,
          about_text ?? null,
          first_live_at ?? null,
          tags && tags.length > 0 ? tags : null,
          thumbnailUrl,
-         intermissionUrl]
+         intermissionUrl,
+         contribution_policy ?? 'closed']
       );
       channel = chResult.rows[0];
     }
