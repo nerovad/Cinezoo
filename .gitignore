@@ -16,6 +16,9 @@ mobile/dist/
 *.wav
 *.mp3
 
+# Blender auto-backups
+*.blend1
+
 # Shared build output
 shared/dist/
 
