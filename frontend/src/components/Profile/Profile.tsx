@@ -641,6 +641,10 @@ const Profile: React.FC = () => {
         isOpen={isCreateChannelOpen}
         onClose={() => setIsCreateChannelOpen(false)}
         onChannelCreated={handleChannelCreated}
+        onEditChannel={(channel) => {
+          setIsCreateChannelOpen(false);
+          setEditingChannel(channel);
+        }}
       />
 
       <EditChannelModal

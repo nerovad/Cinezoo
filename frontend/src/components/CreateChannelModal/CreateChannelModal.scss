@@ -147,6 +147,136 @@
   font-size: 1rem;
 }
 
+/* === Success screen: summary of what was submitted === */
+.success-summary {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+
+  .summary-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: baseline;
+
+    .summary-label {
+      flex: 0 0 110px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: $secondary-color;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .summary-value {
+      flex: 1;
+      min-width: 0;
+      font-size: 0.95rem;
+      color: $text-color-primary;
+      overflow-wrap: anywhere;
+    }
+
+    .summary-thumb {
+      display: block;
+      max-width: 160px;
+      height: auto;
+      border-radius: 6px;
+      border: 1px solid $border-color-primary;
+    }
+
+    .summary-about {
+      white-space: pre-wrap;
+      font-size: 0.9rem;
+      color: $text-color-secondary;
+    }
+
+    .summary-schedule {
+      margin: 0;
+      padding-left: 1.1rem;
+
+      li {
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+      }
+    }
+  }
+}
+
+.success-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+
+  .btn-secondary {
+    background: transparent;
+    color: $secondary-color;
+    border: 2px solid $secondary-color;
+    border-radius: 6px;
+    padding: 0.55rem 1.25rem;
+    font-family: $primary-font-family;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+
+    &:hover {
+      background: rgba($secondary-color, 0.12);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba($secondary-color, 0.25);
+    }
+    &:active { transform: translateY(0); }
+  }
+
+  .success-done-btn {
+    padding: 0.55rem 1.5rem;
+    background-color: $primary-color;
+    color: $channel-text-color;
+    border: none;
+    border-radius: 6px;
+    font-family: $primary-font-family;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    &:hover {
+      background-color: color.adjust($primary-color, $lightness: -5%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba($primary-color, 0.3);
+    }
+    &:active { transform: translateY(0); }
+  }
+}
+
+@media (max-width: 480px) {
+  .success-summary .summary-row {
+    flex-direction: column;
+    gap: 0.2rem;
+
+    .summary-label {
+      flex: none;
+    }
+  }
+
+  .success-actions {
+    flex-direction: column-reverse;
+
+    .btn-secondary,
+    .success-done-btn {
+      width: 100%;
+    }
+  }
+}
+
 .channel-details {
   margin-top: 1.5rem;
   padding: 1.5rem;

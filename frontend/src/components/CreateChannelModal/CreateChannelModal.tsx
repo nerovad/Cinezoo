@@ -5,6 +5,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onChannelCreated?: (channel: any) => void;
+  onEditChannel?: (channel: any) => void;
   excludeClickId?: string;
 }
 
@@ -94,7 +95,46 @@ const POLICY_OPTIONS: Array<{ value: ContributionPolicy; label: string; descript
   { value: 'closed', label: 'Closed', description: 'Not accepting contributions right now' },
 ];
 
-const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated, excludeClickId }) => {
+const RECURRENCE_LABELS: Record<RecurrenceType, string> = {
+  once: 'Once',
+  daily: 'Daily',
+  weekly: 'Weekly',
+  weekdays: 'Weekdays (Mon-Fri)',
+  weekends: 'Weekends (Sat-Sun)',
+};
+
+// Human-readable one-liner for a schedule item in the success summary
+const formatScheduleSummary = (item: ScheduleItem): string => {
+  let when: string;
+  if (item.recurrence_type === 'once') {
+    when = item.scheduled_at ? new Date(item.scheduled_at).toLocaleString() : '';
+  } else {
+    when = RECURRENCE_LABELS[item.recurrence_type];
+    if (item.recurrence_type === 'weekly' && item.recurrence_days?.length) {
+      when += ` (${item.recurrence_days.map(d => DAY_LABELS[d]).join(', ')})`;
+    }
+    if (item.air_time) {
+      when += ` at ${item.air_time}`;
+    }
+  }
+  const duration = item.duration ? ` · ${item.duration}` : '';
+  return `${item.title} — ${when}${duration}`;
+};
+
+// Snapshot of submitted values shown on the success screen (form state resets after create)
+type CreatedSummary = {
+  channelNumber: string;
+  displayName: string;
+  tags: string[];
+  hasThumbnail: boolean;
+  hasIntermission: boolean;
+  widgetNames: string[];
+  aboutText: string;
+  scheduleItems: ScheduleItem[];
+  contributionPolicy: ContributionPolicy | null;
+};
+
+const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated, onEditChannel, excludeClickId }) => {
   const boxRef = useRef<HTMLDivElement>(null);
   const firstFieldRef = useRef<HTMLSelectElement>(null);
 
@@ -107,6 +147,7 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [channelInfo, setChannelInfo] = useState<any>(null);
+  const [createdSummary, setCreatedSummary] = useState<CreatedSummary | null>(null);
 
   // Widgets
   const [selectedWidgets, setSelectedWidgets] = useState<WidgetConfig[]>([]);
@@ -185,7 +226,7 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, onClose, excludeClickId]);
 
-  // ESC, lock scroll, reset to first step, focus first input
+  // ESC, lock scroll, reset to first step + clear stale success view, focus first input
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -193,6 +234,9 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     setCurrentStep(0);
+    setSuccess(false);
+    setChannelInfo(null);
+    setCreatedSummary(null);
     setTimeout(() => firstFieldRef.current?.focus(), 0);
     return () => {
       document.removeEventListener("keydown", onKey);
@@ -398,6 +442,19 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
       const data = await res.json();
       setChannelInfo(data);
 
+      // Snapshot what was submitted for the success summary before clearing the form
+      setCreatedSummary({
+        channelNumber,
+        displayName,
+        tags: [...tags],
+        hasThumbnail: !!thumbnailFile,
+        hasIntermission: !!intermissionFile,
+        widgetNames: selectedWidgets.map(w => GENERAL_WIDGETS.find(g => g.type === w.type)?.name ?? w.type),
+        aboutText,
+        scheduleItems: scheduleItems.filter(item => item.title.trim() && item.scheduled_at),
+        contributionPolicy: isWidgetSelected('contributions') ? contributionPolicy : null,
+      });
+
       // Reset form
       setChannelNumber("");
       setDisplayName("");
@@ -430,8 +487,9 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
       <div className="create-channel-content" ref={boxRef}>
         <button className="close-btn" onClick={onClose} aria-label="Close create channel">X</button>
 
-        <h2 id="create-channel-title">Create Channel</h2>
+        <h2 id="create-channel-title">{success ? "Channel Created" : "Create Channel"}</h2>
 
+        {!success && (
         <form className="create-channel-form" onSubmit={handleSubmit}>
           {/* Step legend: click to jump to any step */}
           <ol className="wizard-legend" aria-label="Form steps">
@@ -845,24 +903,101 @@ const CreateChannelModal: React.FC<Props> = ({ isOpen, onClose, onChannelCreated
             </div>
           </div>
         </form>
+        )}
 
-        {success && <p className="create-channel-message">Channel created successfully!</p>}
+        {success && (
+          <div className="create-success">
+            <p className="create-channel-message">Channel created successfully!</p>
 
-        {channelInfo && (
-          <div className="channel-details">
-            <p><strong>Stream Key:</strong> {channelInfo.stream_key}</p>
-            <p><strong>Ingest URL for OBS:</strong> rtmp://cinezoo.tv/live/{channelInfo.stream_key}</p>
-            <p><strong>Playback URL (HLS):</strong> {channelInfo.playback_path}</p>
+            {createdSummary && (
+              <div className="success-summary">
+                <div className="summary-row">
+                  <span className="summary-label">Channel</span>
+                  <span className="summary-value">#{createdSummary.channelNumber} — {createdSummary.displayName}</span>
+                </div>
+                <div className="summary-row">
+                  <span className="summary-label">Tags</span>
+                  <span className="summary-value">{createdSummary.tags.length > 0 ? createdSummary.tags.join(', ') : 'None'}</span>
+                </div>
+                <div className="summary-row">
+                  <span className="summary-label">Thumbnail</span>
+                  <span className="summary-value">
+                    {channelInfo?.thumbnail ? (
+                      <img className="summary-thumb" src={channelInfo.thumbnail} alt="Channel thumbnail" />
+                    ) : createdSummary.hasThumbnail ? 'Uploaded' : 'Default'}
+                  </span>
+                </div>
+                <div className="summary-row">
+                  <span className="summary-label">Intermission</span>
+                  <span className="summary-value">{createdSummary.hasIntermission ? 'Custom screen uploaded' : 'Default screen'}</span>
+                </div>
+                <div className="summary-row">
+                  <span className="summary-label">Widgets</span>
+                  <span className="summary-value">{createdSummary.widgetNames.length > 0 ? createdSummary.widgetNames.join(', ') : 'None'}</span>
+                </div>
+                {createdSummary.aboutText && (
+                  <div className="summary-row">
+                    <span className="summary-label">About</span>
+                    <span className="summary-value summary-about">{createdSummary.aboutText}</span>
+                  </div>
+                )}
+                {createdSummary.scheduleItems.length > 0 && (
+                  <div className="summary-row">
+                    <span className="summary-label">Schedule</span>
+                    <div className="summary-value">
+                      <ul className="summary-schedule">
+                        {createdSummary.scheduleItems.map((item, idx) => (
+                          <li key={idx}>{formatScheduleSummary(item)}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+                {createdSummary.contributionPolicy && (
+                  <div className="summary-row">
+                    <span className="summary-label">Contributions</span>
+                    <span className="summary-value">
+                      {POLICY_OPTIONS.find(o => o.value === createdSummary.contributionPolicy)?.label}
+                      {' — '}
+                      {POLICY_OPTIONS.find(o => o.value === createdSummary.contributionPolicy)?.description.toLowerCase()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
-            <div className="channel-actions">
-              <button onClick={() => navigator.clipboard.writeText(channelInfo.stream_key)}>
-                Copy Stream Key
-              </button>
-              <button onClick={() => navigator.clipboard.writeText(`rtmp://cinezoo.tv/live/${channelInfo.stream_key}`)}>
-                Copy Ingest URL
-              </button>
-              <button onClick={() => navigator.clipboard.writeText(channelInfo.playback_path)}>
-                Copy Playback URL
+            {channelInfo && (
+              <div className="channel-details">
+                <p><strong>Stream Key:</strong> {channelInfo.stream_key}</p>
+                <p><strong>Ingest URL for OBS:</strong> rtmp://cinezoo.tv/live/{channelInfo.stream_key}</p>
+                <p><strong>Playback URL (HLS):</strong> {channelInfo.playback_path}</p>
+
+                <div className="channel-actions">
+                  <button onClick={() => navigator.clipboard.writeText(channelInfo.stream_key)}>
+                    Copy Stream Key
+                  </button>
+                  <button onClick={() => navigator.clipboard.writeText(`rtmp://cinezoo.tv/live/${channelInfo.stream_key}`)}>
+                    Copy Ingest URL
+                  </button>
+                  <button onClick={() => navigator.clipboard.writeText(channelInfo.playback_path)}>
+                    Copy Playback URL
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="success-actions">
+              {onEditChannel && channelInfo && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => onEditChannel(channelInfo)}
+                >
+                  Edit Channel
+                </button>
+              )}
+              <button type="button" className="success-done-btn" onClick={onClose}>
+                Done
               </button>
             </div>
           </div>
