@@ -285,6 +285,43 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     checkVideo();
   }, []);
 
+  // Arm sound on the first real user gesture. Browsers only allow unmuted
+  // playback after a genuine interaction (click/tap/keypress) — flipping
+  // hasUserInteractedRef from an `ended` event doesn't count, so on a true
+  // first visit the auto-unmute on channel switch gets rejected and the
+  // catch handler re-mutes. The first gesture of any kind unlocks audio
+  // for the rest of the session.
+  useEffect(() => {
+    const remove = () => {
+      document.removeEventListener("pointerdown", armSound, true);
+      document.removeEventListener("keydown", armSound, true);
+    };
+    const armSound = (e: Event) => {
+      // Let the mute icon and M key go through toggleMute instead, so a
+      // deliberate mute isn't immediately undone by this handler.
+      // NOTE: don't bail on hasUserInteractedRef here — the channel-switch
+      // auto-unmute sets it optimistically without a real gesture, so on a
+      // first visit it's already true while the video is still muted.
+      if (e instanceof KeyboardEvent && e.key.toLowerCase() === "m") return;
+      if ((e.target as HTMLElement | null)?.closest?.(".mute-icon-overlay")) return;
+
+      hasUserInteractedRef.current = true;
+      remove();
+
+      if (userExplicitlyMutedRef.current) return;
+      const v = videoRef.current;
+      // Keep the color-bars boot screen silent; unmute anything after it.
+      if (v && v.muted && !v.src.includes("Color_Bars")) {
+        v.muted = false;
+        setIsMuted(false);
+        setShowMuteIcon(false);
+      }
+    };
+    document.addEventListener("pointerdown", armSound, true);
+    document.addEventListener("keydown", armSound, true);
+    return remove;
+  }, []);
+
   // Mirror the video element's muted state into the overlay icon, so any
   // path that flips muted (slider, M key, remote, programmatic) stays in sync.
   useEffect(() => {
