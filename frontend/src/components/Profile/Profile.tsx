@@ -280,6 +280,10 @@ const Profile: React.FC = () => {
     );
   }
 
+  const handleChannelCreated = (newChannel: any) => {
+    setChannels(prev => [...prev, newChannel]);
+  };
+
   const handleChannelUpdate = (updatedChannel: any) => {
     setChannels(prev => prev.map(ch =>
       ch.id === updatedChannel.id ? { ...ch, ...updatedChannel } : ch
@@ -636,6 +640,7 @@ const Profile: React.FC = () => {
       <CreateChannelModal
         isOpen={isCreateChannelOpen}
         onClose={() => setIsCreateChannelOpen(false)}
+        onChannelCreated={handleChannelCreated}
       />
 
       <EditChannelModal
