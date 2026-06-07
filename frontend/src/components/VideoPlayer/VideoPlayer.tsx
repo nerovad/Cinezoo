@@ -297,13 +297,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
       document.removeEventListener("keydown", armSound, true);
     };
     const armSound = (e: Event) => {
-      // Let the mute icon and M key go through toggleMute instead, so a
-      // deliberate mute isn't immediately undone by this handler.
+      // Let the mute controls and M key go through toggleMute instead, so a
+      // deliberate click on a mute button isn't pre-empted by this handler
+      // flipping the state first (which would invert the button's action).
       // NOTE: don't bail on hasUserInteractedRef here — the channel-switch
       // auto-unmute sets it optimistically without a real gesture, so on a
       // first visit it's already true while the video is still muted.
       if (e instanceof KeyboardEvent && e.key.toLowerCase() === "m") return;
-      if ((e.target as HTMLElement | null)?.closest?.(".mute-icon-overlay")) return;
+      if ((e.target as HTMLElement | null)?.closest?.(".mute-icon-overlay, .mute-button")) return;
 
       hasUserInteractedRef.current = true;
       remove();
