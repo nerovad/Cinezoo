@@ -85,9 +85,35 @@ async function loadLedger(client) {
   return new Map(rows.map((r) => [r.filename, r]));
 }
 
+/**
+ * A populated database with an empty ledger is a database that was migrated by
+ * hand before the ledger existed. Applying "pending" migrations to it would
+ * re-run work that is already present. Refuse, and point at baseline.
+ *
+ * Keyed on the ledger being *empty* rather than *absent*, because `status`
+ * creates the table as a side effect — an absent-table check would be defeated
+ * by running `status` first.
+ */
+async function isUnbaselinedDatabase(client) {
+  const { rows } = await client.query(`
+    SELECT
+      (SELECT count(*) FROM schema_migrations) AS ledger_rows,
+      (SELECT count(*) FROM pg_tables
+        WHERE schemaname = 'public' AND tablename <> 'schema_migrations') AS other_tables
+  `);
+  return Number(rows[0].ledger_rows) === 0 && Number(rows[0].other_tables) > 0;
+}
+
 async function cmdStatus(client) {
   const ledger = await loadLedger(client);
   const migrations = readMigrations();
+
+  if (await isUnbaselinedDatabase(client)) {
+    console.log(
+      '\n  WARNING: this database has tables but an empty ledger.' +
+        '\n  It predates the ledger and needs `baseline` before `up` will run.'
+    );
+  }
 
   let pending = 0;
   let drifted = 0;
@@ -128,6 +154,17 @@ async function cmdStatus(client) {
 async function cmdUp(client, { dryRun }) {
   const ledger = await loadLedger(client);
   const migrations = readMigrations();
+
+  if (await isUnbaselinedDatabase(client)) {
+    throw new Error(
+      'Refusing to migrate: this database has tables but no ledger entries.\n' +
+        '  It was migrated by hand before the ledger existed, so every migration\n' +
+        '  looks pending when it is not.\n\n' +
+        '  Record the current state first, then deploy again:\n' +
+        '    npm run migrate:status    --workspace=backend\n' +
+        '    npm run migrate:baseline  --workspace=backend -- --through <last applied>.sql'
+    );
+  }
 
   for (const m of migrations) {
     const record = ledger.get(m.filename);
