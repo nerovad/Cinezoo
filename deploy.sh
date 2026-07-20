@@ -15,6 +15,9 @@ npm run build --workspace=frontend
 echo "Building backend..."
 npm run build --workspace=backend
 
+echo "Running database migrations..."
+npm run migrate --workspace=backend
+
 echo "Restarting backend..."
 if ! command -v pm2 &> /dev/null; then
   echo "PM2 not found, installing globally..."
