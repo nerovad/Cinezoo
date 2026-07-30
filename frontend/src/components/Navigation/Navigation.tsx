@@ -370,7 +370,7 @@ const SearchNavBar: React.FC<NavBarProps> = ({
       {/* Center Controls — Pill Bar */}
       <div className="search-navbar__center">
         <div className="control-pill">
-          <div className="control-pill__group">
+          <div className="control-pill__group control-pill__group--channel">
             <button className="channel-button" onClick={goToPreviousVideo}>
               <img src={ChannelArrow} alt="Previous Channel" className="channel-arrow-icon" />
             </button>
@@ -380,20 +380,15 @@ const SearchNavBar: React.FC<NavBarProps> = ({
           </div>
 
           {!isMobile && (
-            <>
-              <span className="control-pill__divider" />
-              <div className="control-pill__group">
-                <button
-                  className="search-navbar__tv-guide-button"
-                  onClick={(e) => { e.preventDefault(); setIsGuideOpen?.((prev) => !prev); }}
-                >
-                  <img src={TvGuide} alt="TV Guide" />
-                </button>
-              </div>
-            </>
+            <div className="control-pill__group">
+              <button
+                className="search-navbar__tv-guide-button"
+                onClick={(e) => { e.preventDefault(); setIsGuideOpen?.((prev) => !prev); }}
+              >
+                <img src={TvGuide} alt="TV Guide" />
+              </button>
+            </div>
           )}
-
-          <span className="control-pill__divider" />
 
           <div className="control-pill__group control-pill__group--search">
             <div className="search-navbar__channel-input-container" ref={searchContainerRef}>
@@ -436,8 +431,6 @@ const SearchNavBar: React.FC<NavBarProps> = ({
             </div>
           </div>
 
-          <span className="control-pill__divider" />
-
           {!isMobile && (
             <div
               className={`control-pill__group control-pill__group--volume ${showVolumeSlider ? 'control-pill__group--volume-open' : ''}`}
@@ -466,8 +459,6 @@ const SearchNavBar: React.FC<NavBarProps> = ({
               </div>
             </div>
           )}
-
-          <span className="control-pill__divider" />
 
           <button
             className="shuffle-button"
