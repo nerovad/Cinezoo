@@ -16,7 +16,15 @@ import Profile from "./components/Profile/Profile.tsx";
 import UserProfile from "./components/Profile/UserProfile.tsx";
 import AdminFestivals from "./components/Pages/AdminFestivals.tsx";
 import Admin from "./components/Pages/Admin.tsx";
+import { usePageviews } from "./analytics/hooks";
 import "./App.scss";
+
+// Pageviews are sent by hand rather than by Umami's auto-tracker; this has to
+// live inside the Router to read the current location.
+const RouteTracker: React.FC = () => {
+  usePageviews();
+  return null;
+};
 
 const MainLayout: React.FC<{
   isMenuOpen: boolean;
@@ -167,6 +175,7 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <Router>
+        <RouteTracker />
         <Routes>
           {/* Redirect root to default channel */}
           <Route path="/" element={<Navigate to="/channel/channel-0" replace />} />
