@@ -850,7 +850,46 @@ export async function getChannelSchedule(req: Request, res: Response): Promise<v
 
     const now = new Date();
 
-    // Get ALL schedule items for this channel (including recurrence fields)
+    // --- Now Playing from the as-run log (ground truth) --------------------
+    // A Cinezoo-hosted playout engine (ffplayout) reports every clip start via
+    // POST /api/playout/asrun. The most recent report is what is currently on
+    // air — as long as it hasn't run past its own duration (plus a staleness
+    // grace), which would mean playout has stopped. When present this is
+    // authoritative; it beats any timecode-derived guess below. For legacy and
+    // live channels there are no as-run rows and this stays null.
+    const asRun = await client.query(
+      `SELECT id, segment_id, source, title, started_at, duration_ms, is_ingest
+         FROM channel_asrun
+        WHERE channel_id = $1
+        ORDER BY started_at DESC
+        LIMIT 1`,
+      [channelId]
+    );
+
+    let asRunNowPlaying: any = null;
+    if (asRun.rows.length > 0) {
+      const r = asRun.rows[0];
+      const started = new Date(r.started_at).getTime();
+      const durMs = r.duration_ms ?? 3600000; // assume 1h if the engine reported none
+      if (now.getTime() < started + durMs + 60000 /* staleness grace */) {
+        asRunNowPlaying = {
+          id: r.segment_id ?? r.id,
+          film_id: null,
+          film_title: r.title,
+          title: r.title,
+          scheduled_at: r.started_at, // when it actually started airing
+          duration_seconds: r.duration_ms != null ? Math.round(r.duration_ms / 1000) : null,
+          status: 'airing',
+          source: r.source,
+          is_ingest: r.is_ingest,     // true = live preempted the loop; UI can show "Live"
+          from_asrun: true,
+        };
+      }
+    }
+
+    // Get ALL schedule items for this channel (including recurrence fields).
+    // Still the source for up_next / the editable guide; the segment-based
+    // projection replaces this once the scheduler (Phase 4) populates segments.
     const allResult = await client.query(
       `SELECT cs.*,
               COALESCE(f.title, cs.title) as display_title,
@@ -862,11 +901,10 @@ export async function getChannelSchedule(req: Request, res: Response): Promise<v
       [channelId]
     );
 
-    console.log('Found schedule items:', allResult.rows.length);
-
     if (allResult.rows.length === 0) {
+      // No legacy schedule rows — but as-run may still be driving this channel.
       res.json({
-        now_playing: null,
+        now_playing: asRunNowPlaying,
         up_next: [],
         schedule: []
       });
@@ -908,10 +946,9 @@ export async function getChannelSchedule(req: Request, res: Response): Promise<v
       nowPlaying = upNext.shift();
     }
 
-    console.log('Schedule result:', { nowPlaying: !!nowPlaying, upNextCount: upNext.length });
-
     res.json({
-      now_playing: nowPlaying,
+      // As-run is ground truth when present; otherwise the schedule-derived guess.
+      now_playing: asRunNowPlaying ?? nowPlaying,
       up_next: upNext.slice(0, 5), // Limit to 5 upcoming
       schedule: allResult.rows // Return raw items (not expanded) for editing
     });
