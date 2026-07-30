@@ -53,6 +53,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
   const hasUserInteractedRef = useRef(false);
   const userExplicitlyMutedRef = useRef(false);
   const goToNextVideoRef = useRef<(() => void) | null>(null);
+  const intermissionVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const { setChannelId } = useChatStore();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -337,6 +338,39 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     return () => v.removeEventListener("volumechange", sync);
   }, [isVideoReady]);
 
+  // The looping intermission clip is a SEPARATE <video> element that the
+  // navbar mute button, volume slider, and overlay icon never touch — they
+  // all target the main (hidden, src-less) videoRef during an intermission.
+  // Mirror the main element's muted/volume onto it so those controls actually
+  // affect the audio the user hears on intermission channels (e.g. ch 6, 99).
+  useEffect(() => {
+    if (!showIntermission) return;
+    const main = videoRef.current;
+    if (!main) return;
+    const sync = () => {
+      const iv = intermissionVideoRef.current;
+      if (!iv) return;
+      iv.muted = main.muted;
+      iv.volume = main.volume;
+    };
+    sync();
+    main.addEventListener("volumechange", sync);
+    return () => main.removeEventListener("volumechange", sync);
+  }, [showIntermission]);
+
+  // Set the intermission clip's initial muted/volume the instant it mounts,
+  // from the main video's current state. Runs during commit (before the
+  // browser evaluates autoplay), so a muted main video keeps the clip muted
+  // and a user who already unmuted hears it right away. The effect above
+  // handles every change after mount.
+  const attachIntermissionVideo = useCallback((el: HTMLVideoElement | null) => {
+    intermissionVideoRef.current = el;
+    if (!el) return;
+    const main = videoRef.current;
+    el.muted = main ? main.muted : !hasUserInteractedRef.current;
+    if (main) el.volume = main.volume;
+  }, []);
+
 
   // ✅ Fetch channels
   // ✅ Fetch channels
@@ -500,11 +534,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
           <div className="intermission-screen">
             {isIntermissionVideo ? (
               <video
+                ref={attachIntermissionVideo}
                 src={intermissionSrc}
                 className="intermission-video"
                 autoPlay
                 loop
-                muted={!hasUserInteractedRef.current}
                 playsInline
               />
             ) : (
@@ -519,7 +553,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
         <div className="db-originals-next-button" onClick={goToNextVideo}>
           <div className="channelnumber">{channelName}</div>
         </div>
-        {showMuteIcon && !showIntermission && <img src={muteIcon} alt="Muted" className="mute-icon-overlay" onClick={(e) => { e.stopPropagation(); toggleMute(); }} />}
+        {showMuteIcon && <img src={muteIcon} alt="Muted" className="mute-icon-overlay" onClick={(e) => { e.stopPropagation(); toggleMute(); }} />}
       </div>
 
       <Chatbox isOpen={isChatOpen} setIsOpen={() => { }} />
