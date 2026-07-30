@@ -7,6 +7,7 @@ import "../../styles/_variables.scss";
 import muteIcon from "../../assets/mute_icon.svg";
 import intermissionDefault from "../../assets/intermission.mp4";
 import { useChatStore } from "../../store/useChatStore";
+import { useChannelDwell, useViewingHeartbeat } from "../../analytics/hooks";
 
 interface VideoLink {
   src: string;
@@ -56,6 +57,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
   const intermissionVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const { setChannelId } = useChatStore();
+
+  // Watch time and channel stickiness. Mounted here because VideoPlayer only
+  // renders on the channel route, so viewing stops being counted the moment a
+  // viewer navigates away to /profile, /upload, etc.
+  useViewingHeartbeat(channelSlug);
+  useChannelDwell(channelSlug);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [channelName, setChannelName] = useState("");
   const [, setIsMuted] = useState(true);
