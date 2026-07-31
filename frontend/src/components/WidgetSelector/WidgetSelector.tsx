@@ -8,7 +8,8 @@ export type WidgetType =
   | 'tournament_bracket'
   | 'about'
   | 'now_playing'
-  | 'contributions';
+  | 'contributions'
+  | 'scheduler';
 
 export interface WidgetConfig {
   type: WidgetType;
@@ -45,6 +46,13 @@ const ALWAYS_AVAILABLE_WIDGETS: WidgetOption[] = [
     name: 'Contributions',
     description: 'Let viewers pitch films to your schedule',
     icon: '🤝',
+    alwaysAvailable: true
+  },
+  {
+    type: 'scheduler',
+    name: 'Scheduler',
+    description: 'Program your channel\'s 24/7 loop',
+    icon: '📺',
     alwaysAvailable: true
   }
 ];
