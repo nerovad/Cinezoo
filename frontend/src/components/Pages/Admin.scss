@@ -230,6 +230,67 @@
     margin-top: 2rem;
   }
 
+  /* Ticker editor. Rows wrap so the form stays usable on a narrow window
+     without needing its own breakpoint. */
+  &__ticker-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+  }
+
+  &__ticker-form-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+
+    /* The message field is the one that benefits from room; everything else
+       sits at its natural width. */
+    input[type="text"]:not([placeholder="Priority"]) {
+      flex: 1 1 18rem;
+    }
+
+    input[type="url"] {
+      flex: 1 1 14rem;
+    }
+
+    input[type="number"] {
+      width: 6rem;
+      flex: 0 0 auto;
+    }
+
+    label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+      color: $text-color-primary;
+      white-space: nowrap;
+    }
+
+    input,
+    select {
+      background: rgba($background-color-primary, 0.8);
+      color: $text-color-primary;
+      border: 1.5px solid rgba($primary-color, 0.3);
+      border-radius: 5px;
+      padding: 5px 8px;
+      font-family: $primary-font-family;
+      font-size: 0.8rem;
+
+      &:focus {
+        outline: none;
+        border-color: $primary-color;
+      }
+    }
+
+    input[type="checkbox"] {
+      padding: 0;
+      width: auto;
+    }
+  }
+
   &__analytics-search {
     margin-bottom: 1rem;
 
