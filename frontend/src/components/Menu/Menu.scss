@@ -170,6 +170,8 @@ $lava-shade: color.adjust($primary-color, $lightness: -24%, $saturation: -10%); 
     font-weight: bold;
     margin-top: 2rem;
     text-align: center;
+    // Wax passing behind must never fight the lettering
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
   }
 
   ul {
@@ -184,7 +186,11 @@ $lava-shade: color.adjust($primary-color, $lightness: -24%, $saturation: -10%); 
     margin-bottom: 1rem;
     padding: 0.5rem;
     border-radius: 5px;
-    background: rgba(255, 255, 255, 0.1);
+    // Near-opaque so the wax reads as sitting behind the button, not sliding
+    // across its face. The 1px rim keeps the old glassy edge.
+    background: rgba($background-color-primary, 0.86);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(6px);
     transition: background 0.2s ease-in-out, transform 0.2s ease-in-out;
     cursor: pointer;
 
@@ -218,7 +224,11 @@ $lava-shade: color.adjust($primary-color, $lightness: -24%, $saturation: -10%); 
   inset: 0;
   overflow: hidden;
   pointer-events: none; // Clicks pass through
-  z-index: 0; // Behind menu content
+  // Bottom-most layer of the sidebar. It cannot go negative — the container's
+  // own background is opaque and would swallow it — so 0 is "last", and every
+  // content layer above sets an explicit positive z-index.
+  z-index: 0;
+  isolation: isolate; // Filters/will-change inside can't escape this layer
   opacity: 0; // Hidden when collapsed
   transition: opacity 0.5s ease-in-out;
 
@@ -638,7 +648,7 @@ $lava-shade: color.adjust($primary-color, $lightness: -24%, $saturation: -10%); 
   .btn-ghost {
     padding: 6px 10px;
     border: 1px solid rgba(255, 255, 255, 0.20);
-    background: transparent;
+    background: rgba($background-color-primary, 0.82);
     color: $channel-text-color;
     border-radius: 6px;
     cursor: pointer;
@@ -775,6 +785,7 @@ $lava-shade: color.adjust($primary-color, $lightness: -24%, $saturation: -10%); 
     letter-spacing: 0.08em;
     color: rgba(255, 255, 255, 0.5);
     margin: 0 0 0.5rem 0.25rem;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
   }
 
   ul {
@@ -793,13 +804,16 @@ $lava-shade: color.adjust($primary-color, $lightness: -24%, $saturation: -10%); 
     transition: background 0.15s ease;
     font-size: 0.85rem;
     margin-bottom: 2px;
+    // Opaque row so blobs travel behind the channel list rather than through it
+    background: rgba($background-color-primary, 0.82);
+    backdrop-filter: blur(6px);
 
     &:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba($background-color-secondary, 0.92);
     }
 
     &.active {
-      background: rgba($primary-color, 0.15);
+      background: color.mix($primary-color, $background-color-primary, 22%);
 
       .trending-rank {
         color: $primary-color;
@@ -870,6 +884,7 @@ $lava-shade: color.adjust($primary-color, $lightness: -24%, $saturation: -10%); 
     color: rgba(255, 255, 255, 0.35);
     margin: 0 0 0 0.25rem;
     font-style: italic;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
   }
 }
 
