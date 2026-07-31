@@ -19,6 +19,7 @@ import {
   addChannelContributor,
   removeChannelContributor,
 } from "../controllers/contributionController";
+import { uploadMedia, listMedia, deleteMedia, mediaUpload } from "../controllers/mediaController";
 import { authenticateToken, requireGroup, AuthRequest } from "../middleware/authMiddleware";
 
 const router = express.Router();
@@ -95,6 +96,23 @@ router.post("/:slug/contributors", authenticateToken, (req: Request, res: Respon
 // DELETE /api/channels/:slug/contributors/:userId - owner removes a contributor
 router.delete("/:slug/contributors/:userId(\\d+)", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
   removeChannelContributor(req, res, next);
+});
+
+// --- Media pipeline (Phase 3): owner uploads masters; conform to house format ---
+
+// POST /api/channels/:slug/media - upload a master (multipart field "file"); conforms in background
+router.post("/:slug/media", authenticateToken, mediaUpload.single("file"), (req: Request, res: Response, next: NextFunction) => {
+  uploadMedia(req, res, next);
+});
+
+// GET /api/channels/:slug/media - owner's media catalogue (for the scheduler)
+router.get("/:slug/media", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
+  listMedia(req, res, next);
+});
+
+// DELETE /api/channels/:slug/media/:id - owner removes a media item and its file
+router.delete("/:slug/media/:id(\\d+)", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
+  deleteMedia(req, res, next);
 });
 
 // GET /api/channels/:slug (get single channel by slug)
