@@ -22,6 +22,8 @@ exports.rotateKey = rotateKey;
 exports.getMyChannels = getMyChannels;
 exports.getChannelSchedule = getChannelSchedule;
 exports.updateChannelSchedule = updateChannelSchedule;
+exports.getChannelAnalytics = getChannelAnalytics;
+exports.buildChannelAnalytics = buildChannelAnalytics;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const pool_1 = __importDefault(require("../db/pool"));
 const slugify_1 = require("../utils/slugify");
@@ -69,19 +71,19 @@ function parseDurationToSeconds(s) {
     return null;
 }
 // Save base64 image to uploads folder and return the URL path
-function saveBase64Image(base64Data, channelSlug) {
+function saveBase64Image(base64Data, channelSlug, subfolder = "thumbnails") {
     if (!base64Data)
         return null;
     try {
-        // Extract mime type and data from base64 string
-        const matches = base64Data.match(/^data:image\/(\w+);base64,(.+)$/);
+        // Extract mime type and data from base64 string (supports image and video)
+        const matches = base64Data.match(/^data:(?:image|video)\/(\w+);base64,(.+)$/);
         if (!matches)
             return null;
         const extension = matches[1];
         const data = matches[2];
         const buffer = Buffer.from(data, "base64");
         // Create uploads directory if it doesn't exist
-        const uploadsDir = path_1.default.join(__dirname, "../../uploads/thumbnails");
+        const uploadsDir = path_1.default.join(__dirname, `../../uploads/${subfolder}`);
         if (!fs_1.default.existsSync(uploadsDir)) {
             fs_1.default.mkdirSync(uploadsDir, { recursive: true });
         }
@@ -91,10 +93,10 @@ function saveBase64Image(base64Data, channelSlug) {
         // Save file
         fs_1.default.writeFileSync(filepath, buffer);
         // Return URL path
-        return `/uploads/thumbnails/${filename}`;
+        return `/uploads/${subfolder}/${filename}`;
     }
     catch (err) {
-        console.error("Failed to save thumbnail:", err);
+        console.error(`Failed to save ${subfolder} image:`, err);
         return null;
     }
 }
@@ -125,10 +127,16 @@ function createChannel(req, res, next) {
             first_live_at, // When channel first went live
             tags, // Metadata tags for channel discovery
             thumbnail, // Base64 encoded thumbnail image
+            intermission, // Base64 encoded intermission screen image
             schedule, // Schedule items for Now Playing / Up Next widget
+            contribution_policy, // 'open' | 'invite' | 'closed' for Contributions widget
              } = req.body;
             if (!name && !slug) {
                 res.status(400).json({ error: "name (or slug) is required" });
+                return;
+            }
+            if (contribution_policy && !["open", "invite", "closed"].includes(contribution_policy)) {
+                res.status(400).json({ error: "contribution_policy must be 'open', 'invite', or 'closed'" });
                 return;
             }
             slug = slug ? (0, slugify_1.slugify)(slug) : (0, slugify_1.slugify)(name);
@@ -153,9 +161,10 @@ function createChannel(req, res, next) {
              widgets = COALESCE($6, widgets),
              about_text = COALESCE($7, about_text),
              first_live_at = COALESCE($8, first_live_at),
-             tags = COALESCE($9, tags)
+             tags = COALESCE($9, tags),
+             contribution_policy = COALESCE($10, contribution_policy)
          where id = $1
-         returning id, slug, name, stream_url, stream_key, ingest_app, playback_path, display_name, channel_number, widgets, about_text, first_live_at, tags, created_at`, [row.id, name !== null && name !== void 0 ? name : row.name, stream_url !== null && stream_url !== void 0 ? stream_url : row.stream_url, display_name !== null && display_name !== void 0 ? display_name : row.display_name, channel_number !== null && channel_number !== void 0 ? channel_number : row.channel_number, widgets ? JSON.stringify(widgets) : null, about_text !== null && about_text !== void 0 ? about_text : null, first_live_at !== null && first_live_at !== void 0 ? first_live_at : null, tags && tags.length > 0 ? tags : null]);
+         returning id, slug, name, stream_url, stream_key, ingest_app, playback_path, display_name, channel_number, widgets, about_text, first_live_at, tags, contribution_policy, created_at`, [row.id, name !== null && name !== void 0 ? name : row.name, stream_url !== null && stream_url !== void 0 ? stream_url : row.stream_url, display_name !== null && display_name !== void 0 ? display_name : row.display_name, channel_number !== null && channel_number !== void 0 ? channel_number : row.channel_number, widgets ? JSON.stringify(widgets) : null, about_text !== null && about_text !== void 0 ? about_text : null, first_live_at !== null && first_live_at !== void 0 ? first_live_at : null, tags && tags.length > 0 ? tags : null, contribution_policy !== null && contribution_policy !== void 0 ? contribution_policy : null]);
                 channel = upd.rows[0];
             }
             else {
@@ -164,12 +173,15 @@ function createChannel(req, res, next) {
                 const ingestApp = "live";
                 const playbackPath = `/hls/${streamKey}/index.m3u8`;
                 // Save thumbnail if provided
-                const thumbnailUrl = thumbnail ? saveBase64Image(thumbnail, slug) : null;
+                const thumbnailUrl = thumbnail ? saveBase64Image(thumbnail, slug, "thumbnails") : null;
+                // Save intermission screen if provided (custom per-channel)
+                const intermissionUrl = intermission ? saveBase64Image(intermission, slug, "intermissions") : null;
                 const chResult = yield client.query(`insert into channels
-           (owner_id, slug, name, stream_url, stream_key, ingest_app, playback_path, display_name, channel_number, widgets, about_text, first_live_at, tags, thumbnail, created_at)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, now())
-         returning id, slug, name, stream_url, stream_key, ingest_app, playback_path, display_name, channel_number, widgets, about_text, first_live_at, tags, thumbnail, created_at`, [uid, slug, name !== null && name !== void 0 ? name : slug, stream_url !== null && stream_url !== void 0 ? stream_url : null, streamKey, ingestApp, playbackPath, display_name !== null && display_name !== void 0 ? display_name : null, channel_number !== null && channel_number !== void 0 ? channel_number : null, widgets ? JSON.stringify(widgets) : null, about_text !== null && about_text !== void 0 ? about_text : null, first_live_at !== null && first_live_at !== void 0 ? first_live_at : null, tags && tags.length > 0 ? tags : null,
-                    thumbnailUrl]);
+           (owner_id, slug, name, stream_url, stream_key, ingest_app, playback_path, display_name, channel_number, widgets, about_text, first_live_at, tags, thumbnail, intermission_url, contribution_policy, created_at)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16, now())
+         returning id, slug, name, stream_url, stream_key, ingest_app, playback_path, display_name, channel_number, widgets, about_text, first_live_at, tags, thumbnail, intermission_url, contribution_policy, created_at`, [uid, slug, name !== null && name !== void 0 ? name : slug, stream_url !== null && stream_url !== void 0 ? stream_url : null, streamKey, ingestApp, playbackPath, display_name !== null && display_name !== void 0 ? display_name : null, channel_number !== null && channel_number !== void 0 ? channel_number : null, widgets ? JSON.stringify(widgets) : null, about_text !== null && about_text !== void 0 ? about_text : null, first_live_at !== null && first_live_at !== void 0 ? first_live_at : null, tags && tags.length > 0 ? tags : null,
+                    thumbnailUrl,
+                    intermissionUrl, contribution_policy !== null && contribution_policy !== void 0 ? contribution_policy : 'closed']);
                 channel = chResult.rows[0];
             }
             // Insert schedule items for Now Playing / Up Next widget if provided
@@ -341,7 +353,7 @@ function createChannel(req, res, next) {
 function listChannels(_req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const { rows } = yield pool_1.default.query(`select id, slug, name, stream_url, stream_key, ingest_app, playback_path, channel_number, display_name, tags, created_at
+            const { rows } = yield pool_1.default.query(`select id, slug, name, stream_url, stream_key, ingest_app, playback_path, channel_number, display_name, tags, intermission_url, created_at
        from channels order by created_at desc`);
             res.json(rows);
         }
@@ -357,7 +369,8 @@ function getChannel(req, res, next) {
         try {
             const slug = String(req.params.slug);
             const { rows } = yield pool_1.default.query(`select c.id, c.slug, c.name, c.stream_url, c.stream_key, c.ingest_app, c.playback_path,
-              c.display_name, c.channel_number, c.widgets, c.about_text, c.first_live_at, c.thumbnail, c.created_at,
+              c.display_name, c.channel_number, c.widgets, c.about_text, c.first_live_at, c.thumbnail, c.intermission_url, c.created_at,
+              c.owner_id, c.contribution_policy,
               u.username as owner_name
        from channels c
        left join users u on c.owner_id = u.id
@@ -390,29 +403,41 @@ function updateChannel(req, res, next) {
         if (!uid)
             return;
         const channelId = req.params.id;
-        const { display_name, description, event, films, widgets, about_text, first_live_at } = req.body;
+        const { display_name, description, event, films, widgets, about_text, first_live_at, thumbnail, intermission, contribution_policy } = req.body;
+        if (contribution_policy && !["open", "invite", "closed"].includes(contribution_policy)) {
+            res.status(400).json({ error: "contribution_policy must be 'open', 'invite', or 'closed'" });
+            return;
+        }
         const client = yield pool_1.default.connect();
         let begun = false;
         try {
             yield client.query("BEGIN");
             begun = true;
             // Verify ownership
-            const ownership = yield client.query(`SELECT id FROM channels WHERE id = $1 AND owner_id = $2`, [channelId, uid]);
+            const ownership = yield client.query(`SELECT id, slug FROM channels WHERE id = $1 AND owner_id = $2`, [channelId, uid]);
             if (!ownership.rowCount) {
                 yield client.query("ROLLBACK");
                 begun = false;
                 res.status(403).json({ error: "Not authorized to edit this channel" });
                 return;
             }
+            const channelSlug = ownership.rows[0].slug;
+            // Save thumbnail if provided
+            const thumbnailUrl = thumbnail ? saveBase64Image(thumbnail, channelSlug, "thumbnails") : null;
+            // Save intermission screen if provided
+            const intermissionUrl = intermission ? saveBase64Image(intermission, channelSlug, "intermissions") : null;
             // Update channel
             const updated = yield client.query(`UPDATE channels
        SET display_name = COALESCE($1, display_name),
            description = COALESCE($2, description),
            widgets = COALESCE($3, widgets),
            about_text = COALESCE($4, about_text),
-           first_live_at = COALESCE($5, first_live_at)
+           first_live_at = COALESCE($5, first_live_at),
+           thumbnail = COALESCE($7, thumbnail),
+           intermission_url = COALESCE($8, intermission_url),
+           contribution_policy = COALESCE($9, contribution_policy)
        WHERE id = $6
-       RETURNING *`, [display_name, description, widgets ? JSON.stringify(widgets) : null, about_text, first_live_at, channelId]);
+       RETURNING *`, [display_name, description, widgets ? JSON.stringify(widgets) : null, about_text, first_live_at, channelId, thumbnailUrl, intermissionUrl, contribution_policy !== null && contribution_policy !== void 0 ? contribution_policy : null]);
             // Handle event creation if provided (same logic as createChannel)
             let sessionRow = null;
             let filmRows = [];
@@ -630,6 +655,7 @@ function expandRecurringItems(items, daysAhead = 7) {
 // GET /api/channels/:slug/schedule - Get channel schedule
 function getChannelSchedule(req, res) {
     return __awaiter(this, void 0, void 0, function* () {
+        var _a, _b;
         const { slug } = req.params;
         const client = yield pool_1.default.connect();
         try {
@@ -642,7 +668,41 @@ function getChannelSchedule(req, res) {
             const channelId = chResult.rows[0].id;
             console.log('Fetching schedule for channel:', { slug, channelId });
             const now = new Date();
-            // Get ALL schedule items for this channel (including recurrence fields)
+            // --- Now Playing from the as-run log (ground truth) --------------------
+            // A Cinezoo-hosted playout engine (ffplayout) reports every clip start via
+            // POST /api/playout/asrun. The most recent report is what is currently on
+            // air — as long as it hasn't run past its own duration (plus a staleness
+            // grace), which would mean playout has stopped. When present this is
+            // authoritative; it beats any timecode-derived guess below. For legacy and
+            // live channels there are no as-run rows and this stays null.
+            const asRun = yield client.query(`SELECT id, segment_id, source, title, started_at, duration_ms, is_ingest
+         FROM channel_asrun
+        WHERE channel_id = $1
+        ORDER BY started_at DESC
+        LIMIT 1`, [channelId]);
+            let asRunNowPlaying = null;
+            if (asRun.rows.length > 0) {
+                const r = asRun.rows[0];
+                const started = new Date(r.started_at).getTime();
+                const durMs = (_a = r.duration_ms) !== null && _a !== void 0 ? _a : 3600000; // assume 1h if the engine reported none
+                if (now.getTime() < started + durMs + 60000 /* staleness grace */) {
+                    asRunNowPlaying = {
+                        id: (_b = r.segment_id) !== null && _b !== void 0 ? _b : r.id,
+                        film_id: null,
+                        film_title: r.title,
+                        title: r.title,
+                        scheduled_at: r.started_at, // when it actually started airing
+                        duration_seconds: r.duration_ms != null ? Math.round(r.duration_ms / 1000) : null,
+                        status: 'airing',
+                        source: r.source,
+                        is_ingest: r.is_ingest, // true = live preempted the loop; UI can show "Live"
+                        from_asrun: true,
+                    };
+                }
+            }
+            // Get ALL schedule items for this channel (including recurrence fields).
+            // Still the source for up_next / the editable guide; the segment-based
+            // projection replaces this once the scheduler (Phase 4) populates segments.
             const allResult = yield client.query(`SELECT cs.*,
               COALESCE(f.title, cs.title) as display_title,
               f.id as film_id
@@ -650,10 +710,10 @@ function getChannelSchedule(req, res) {
        LEFT JOIN films f ON cs.film_id = f.id
        WHERE cs.channel_id = $1
        ORDER BY cs.scheduled_at ASC`, [channelId]);
-            console.log('Found schedule items:', allResult.rows.length);
             if (allResult.rows.length === 0) {
+                // No legacy schedule rows — but as-run may still be driving this channel.
                 res.json({
-                    now_playing: null,
+                    now_playing: asRunNowPlaying,
                     up_next: [],
                     schedule: []
                 });
@@ -689,9 +749,9 @@ function getChannelSchedule(req, res) {
             if (!nowPlaying && upNext.length > 0) {
                 nowPlaying = upNext.shift();
             }
-            console.log('Schedule result:', { nowPlaying: !!nowPlaying, upNextCount: upNext.length });
             res.json({
-                now_playing: nowPlaying,
+                // As-run is ground truth when present; otherwise the schedule-derived guess.
+                now_playing: asRunNowPlaying !== null && asRunNowPlaying !== void 0 ? asRunNowPlaying : nowPlaying,
                 up_next: upNext.slice(0, 5), // Limit to 5 upcoming
                 schedule: allResult.rows // Return raw items (not expanded) for editing
             });
@@ -833,5 +893,106 @@ function updateChannelSchedule(req, res) {
             client.release();
             console.log('Database client released');
         }
+    });
+}
+/* ---------------------- Channel Analytics ---------------------- */
+function getChannelAnalytics(req, res) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const uid = authUserIdOr401(req, res);
+        if (!uid)
+            return;
+        const { channelId } = req.params;
+        try {
+            // Verify ownership
+            const chResult = yield pool_1.default.query(`SELECT id, display_name, name, channel_number, created_at, first_live_at, owner_id
+       FROM channels WHERE id = $1`, [channelId]);
+            if (chResult.rows.length === 0) {
+                res.status(404).json({ error: "Channel not found" });
+                return;
+            }
+            const channel = chResult.rows[0];
+            if (channel.owner_id !== uid) {
+                res.status(403).json({ error: "Not authorized" });
+                return;
+            }
+            const analytics = yield buildChannelAnalytics(parseInt(channelId));
+            res.json(Object.assign({ channel }, analytics));
+        }
+        catch (error) {
+            console.error("Channel analytics error:", error);
+            res.status(500).json({ error: "Server error" });
+        }
+    });
+}
+function buildChannelAnalytics(channelId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // Sessions summary
+        const sessionsResult = yield pool_1.default.query(`SELECT COUNT(*) as total_sessions,
+            COUNT(*) FILTER (WHERE status = 'live') as live_sessions,
+            COUNT(*) FILTER (WHERE status = 'closed' OR status = 'archived') as completed_sessions,
+            MIN(starts_at) as first_session,
+            MAX(starts_at) as latest_session
+     FROM sessions WHERE channel_id = $1`, [channelId]);
+        // Total entries (films submitted)
+        const entriesResult = yield pool_1.default.query(`SELECT COUNT(*) as total_entries
+     FROM session_entries se
+     JOIN sessions s ON se.session_id = s.id
+     WHERE s.channel_id = $1`, [channelId]);
+        // Total votes (ballots cast)
+        const ballotsResult = yield pool_1.default.query(`SELECT COUNT(*) as total_ballots
+     FROM ballots b
+     JOIN sessions s ON b.session_id = s.id
+     WHERE s.channel_id = $1`, [channelId]);
+        // Total ratings
+        const ratingsResult = yield pool_1.default.query(`SELECT COUNT(*) as total_ratings,
+            ROUND(AVG(score), 2) as avg_rating
+     FROM ratings r
+     JOIN sessions s ON r.session_id = s.id
+     WHERE s.channel_id = $1`, [channelId]);
+        // Total match votes
+        const matchVotesResult = yield pool_1.default.query(`SELECT COUNT(*) as total_match_votes
+     FROM match_votes mv
+     JOIN matches m ON mv.match_id = m.id
+     JOIN sessions s ON m.session_id = s.id
+     WHERE s.channel_id = $1`, [channelId]);
+        // Chat messages count
+        const messagesResult = yield pool_1.default.query(`SELECT COUNT(*) as total_messages
+     FROM messages WHERE channel_id = $1`, [channelId]);
+        // Schedule items count
+        const scheduleResult = yield pool_1.default.query(`SELECT COUNT(*) as total_schedule_items
+     FROM channel_schedule WHERE channel_id = $1`, [channelId]);
+        // Recent sessions (last 10)
+        const recentSessions = yield pool_1.default.query(`SELECT id, title, starts_at, ends_at, status, created_at
+     FROM sessions WHERE channel_id = $1
+     ORDER BY starts_at DESC LIMIT 10`, [channelId]);
+        // Unique voters (distinct user_ids from ballots)
+        const uniqueVotersResult = yield pool_1.default.query(`SELECT COUNT(DISTINCT b.user_id) as unique_voters
+     FROM ballots b
+     JOIN sessions s ON b.session_id = s.id
+     WHERE s.channel_id = $1 AND b.user_id IS NOT NULL`, [channelId]);
+        return {
+            sessions: {
+                total: parseInt(sessionsResult.rows[0].total_sessions),
+                live: parseInt(sessionsResult.rows[0].live_sessions),
+                completed: parseInt(sessionsResult.rows[0].completed_sessions),
+                first_session: sessionsResult.rows[0].first_session,
+                latest_session: sessionsResult.rows[0].latest_session,
+            },
+            engagement: {
+                total_entries: parseInt(entriesResult.rows[0].total_entries),
+                total_ballots: parseInt(ballotsResult.rows[0].total_ballots),
+                total_ratings: parseInt(ratingsResult.rows[0].total_ratings),
+                avg_rating: ratingsResult.rows[0].avg_rating ? parseFloat(ratingsResult.rows[0].avg_rating) : null,
+                total_match_votes: parseInt(matchVotesResult.rows[0].total_match_votes),
+                unique_voters: parseInt(uniqueVotersResult.rows[0].unique_voters),
+            },
+            chat: {
+                total_messages: parseInt(messagesResult.rows[0].total_messages),
+            },
+            schedule: {
+                total_items: parseInt(scheduleResult.rows[0].total_schedule_items),
+            },
+            recent_sessions: recentSessions.rows,
+        };
     });
 }
