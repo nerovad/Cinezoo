@@ -482,19 +482,33 @@ stream — which also breaks seamless joins and as-run. YouTube is fine only as 
 **Unchanged:** nginx-rtmp, `stream_key`, `on_publish` auth, hls.js playback,
 `HLS_BASE`, and the entire live-mode path. Current videos keep playing.
 
-**New endpoints:**
+**New endpoints — ✓ all built (Phases 2–4, branch `feat/media-pipeline`):**
 
-| Method | Path | Auth |
-|---|---|---|
-| GET | `/api/channels/:slug/playlist/:y/:m/:date.json` | `playout_token` |
-| POST | `/api/playout/asrun` | `X-Stream-Key` |
-| GET/PUT | `/api/channels/:slug/segments` | JWT, owner only |
-| POST | `/api/channels/:slug/media` (resumable upload → conform) | JWT, owner only |
+| Method | Path | Auth | Status |
+|---|---|---|---|
+| GET | `/api/playout/pl/:token/:year/:month/:date.json` | `playout_token` | ✓ built |
+| POST | `/api/playout/asrun` | `X-Stream-Key` | ✓ built |
+| GET | `/api/channels/:slug/media` | JWT, owner | ✓ built |
+| POST | `/api/channels/:slug/media` (streaming multipart → conform) | JWT, owner | ✓ built |
+| DELETE | `/api/channels/:slug/media/:id` | JWT, owner | ✓ built |
+| GET | `/api/channels/:slug/segments` | JWT, owner | ✓ built |
+| POST | `/api/channels/:slug/segments` | JWT, owner | ✓ built |
+| POST | `/api/channels/:slug/segments/reorder` (`{ordered_ids}`) | JWT, owner | ✓ built |
+| PATCH | `/api/channels/:slug/segments/:id` (trim) | JWT, owner | ✓ built |
+| DELETE | `/api/channels/:slug/segments/:id` | JWT, owner | ✓ built |
 
-Mount a new `playoutRoutes` in `server.ts` alongside `rtmpRoutes`.
+Note the playlist path landed as `/api/playout/pl/:token/...` (token in the
+path, not `/channels/:slug/playlist/...`): ffplayout appends `/YYYY/MM/DD.json`
+to its configured base URL, so the auth token must live in the base path, and it
+doubles as the channel identifier. `playoutRoutes` is mounted at `/api/playout`
+alongside `rtmpRoutes`.
 
-**New service:** a conform worker (ffmpeg → house format) and a playout
-supervisor (start/stop ffplayout processes, always-on now, on-demand later).
+**New service:** ✓ conform worker (`services/conform.ts`, ffmpeg → house format)
+and playlist generation (`services/playlist.ts`). Still to build: the playout
+supervisor (start/stop ffplayout processes, always-on now, on-demand in Phase 5).
+
+**Resumable upload** was descoped to streaming multipart for v1 (see §4); tus is
+a later upgrade.
 
 **Rewritten:** `getChannelSchedule` in `channelController.ts:836`. Today it
 expands recurrence from `scheduled_at` timestamps and falls back to a hardcoded
@@ -541,31 +555,52 @@ Each is a silent failure rather than an error:
 
 ## 13. Phasing
 
-**Phase 1 — prove the pipe.** One scheduled channel, hand-written playlist JSON
-served from Cinezoo, a Cinezoo-hosted ffplayout pointed at it, output into the
-existing nginx-rtmp. No UI, no schema. Confirms pull mode, config, and — the one
-real risk — whether a continuous ffplayout push behaves in nginx-rtmp the way
-OBS does, with clean clip boundaries. Harness already built in
-[`docs/phase1/`](phase1/README.md). A day or two.
+**✓ Phase 1 — prove the pipe. DONE.** The one real risk — whether a *continuous*
+push segments cleanly into nginx-rtmp → HLS — was retired with the harness in
+[`docs/phase1/`](phase1/README.md). Verified on-machine: an ffmpeg stand-in
+looping four clips produced clean live HLS with **no `EXT-X-DISCONTINUITY` at
+clip boundaries** (only the stream-start marker), uniform 4s segments unaligned
+to the 5s clips, ffprobe-playable throughout.
 
-**Phase 2 — as-run.** Task script + `POST /api/playout/asrun` → `channel_asrun`.
-Rewrite `getChannelSchedule` to read it. `NowPlayingWidget` becomes correct
-without being touched.
+**✓ Phase 2 — as-run. DONE.** `POST /api/playout/asrun` (auth `X-Stream-Key`) →
+`channel_asrun` (migration 014). `getChannelSchedule` rewritten to read as-run as
+ground truth for `now_playing`, falling back to `channel_schedule` for legacy /
+live channels; response shape unchanged so `NowPlayingWidget` needs no edits.
 
-**Phase 3 — hosting + conform.** Upload endpoint, conform worker, `channel_media`.
-Durations become local and authoritative.
+**✓ Phase 3 — hosting + conform. DONE.** `POST /api/channels/:slug/media`
+streams a master to per-channel storage; `services/conform.ts` transcodes to the
+house format (1280×720, 30fps, H.264, GOP 60, faststart, AAC) and probes the
+**conformed output** for an authoritative duration. Verified: a vertical
+480×854 master → uniform 1280×720, duration measured from the output (7012ms vs
+the master's 7000).
 
-**Phase 4 — the scheduler + contributions.** `channel_segments`, the drag-drop
-UI (segment height ∝ duration, snapping to segment boundaries — no invalid drop,
-because you're reordering a list and the timeline renders that list), playlist
-generation, accepted pitch appends a segment.
+**✓ Phase 4 — the scheduler. DONE.** `channel_segments` CRUD + a `reorder` that
+rewrites gapped positions via a two-phase update (park negative, then finals) so
+the non-deferrable unique index never transiently collides (verified). Playlist
+generation (`services/playlist.ts`) expands the loop to fill 24h (verified: 417
+items, correct `in`/`out`/`duration`, trims, categories). `GET /api/playout/pl/
+:token/...` serves it with `Last-Modified` from `channels.schedule_rev`
+(migration 015, bumped on every mutation) + `If-Modified-Since` → 304. The
+`SchedulerWidget` (owner-only, from the channel Menu) is the drag-drop UI:
+media library + upload with conform polling on the left, reorderable timeline
+(block height ∝ duration) on the right.
 
-**Phase 5 — on-demand encoding.** Playout supervisor starts/stops processes on
-viewer count and seeks to the computed offset. The cost optimization; only worth
-it once the fleet is real.
+**Contributions rewiring** (accepted pitch → append a `channel_segments` row)
+and the `ContributionsWidget` `film_id` fix remain open follow-ups.
 
-Phase 1 gates everything. It touches no existing code and answers the only
-question that can't be reasoned about on paper.
+**→ Phase 5 — the real ffplayout + on-demand encoding. IN PROGRESS.** Two parts:
+1. **Integration** — stand up a real ffplayout against a real channel's playlist
+   URL + as-run endpoint and confirm the full loop end-to-end. This is the one
+   seam nothing above has exercised (Phase 1 used an ffmpeg stand-in). Needs a
+   channel provisioning step (mint `playout_token`, set `playout_mode`, emit the
+   engine config) and a config/runbook.
+2. **On-demand encoding** — a playout supervisor that starts a channel's engine
+   on the first viewer, seeks to `resolve(now).offset` so it joins mid-loop, and
+   tears down after the last viewer leaves. The cost optimization (§14); only
+   worth it once the fleet is real.
+
+Everything above Phase 5 is built and unit/integration-tested against a
+throwaway Postgres and ffmpeg; the untested seam is a live ffplayout process.
 
 ---
 

@@ -27,6 +27,7 @@ import {
   reorderSegments,
   deleteSegment,
 } from "../controllers/segmentController";
+import { provisionPlayout, getPlayoutConfig } from "../controllers/playoutController";
 import { authenticateToken, requireGroup, AuthRequest } from "../middleware/authMiddleware";
 
 const router = express.Router();
@@ -147,6 +148,18 @@ router.patch("/:slug/segments/:id(\\d+)", authenticateToken, (req: Request, res:
 // DELETE /api/channels/:slug/segments/:id - remove a segment
 router.delete("/:slug/segments/:id(\\d+)", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
   deleteSegment(req, res, next);
+});
+
+// --- Playout provisioning (Phase 5): turn a channel into a scheduled channel ---
+
+// POST /api/channels/:slug/playout/provision - mint token, set scheduled, emit engine config
+router.post("/:slug/playout/provision", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
+  provisionPlayout(req, res).catch(next);
+});
+
+// GET /api/channels/:slug/playout/config - read the engine config (owner)
+router.get("/:slug/playout/config", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
+  getPlayoutConfig(req, res).catch(next);
 });
 
 // GET /api/channels/:slug (get single channel by slug)

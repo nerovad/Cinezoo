@@ -1,6 +1,102 @@
 import { Request, Response } from "express";
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import pool from "../db/pool";
 import { buildDayPlaylist, SegmentRow } from "../services/playlist";
+import { MEDIA_ROOT } from "../services/mediaStorage";
+
+/* Where the public API and RTMP tower live, for the engine config we emit. */
+const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || "https://cinezoo.tv").replace(/\/$/, "");
+const RTMP_INGEST_URL = (process.env.RTMP_INGEST_URL || "rtmp://cinezoo.tv:1935/live").replace(/\/$/, "");
+
+/* Auth helper — matches the segment/media controllers. */
+function authUserIdOr401(req: Request, res: Response): number | null {
+  const h = req.headers.authorization || "";
+  const token = h.startsWith("Bearer ") ? h.slice(7) : null;
+  if (!token) { res.status(401).json({ error: "Access Denied" }); return null; }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: number };
+    return decoded.id;
+  } catch {
+    res.status(401).json({ error: "Invalid Token" });
+    return null;
+  }
+}
+
+/** Shape the ffplayout-facing config for a provisioned channel. */
+function buildPlayoutConfig(channel: {
+  id: number; playout_token: string; stream_key: string;
+}) {
+  return {
+    channel_id: channel.id,
+    playout_mode: "scheduled" as const,
+    // ffplayout `playlists` config → it fetches <base>/YYYY/MM/YYYY-MM-DD.json
+    playlist_url: `${PUBLIC_BASE_URL}/api/playout/pl/${channel.playout_token}`,
+    // ffplayout stream output target (its push lands in Cinezoo's nginx-rtmp)
+    rtmp_output: `${RTMP_INGEST_URL}/${channel.stream_key}`,
+    // ffplayout storage root — where conformed media for this channel lives
+    media_storage_root: `${MEDIA_ROOT}/${channel.id}`,
+    // as-run task-script target + the secret it authenticates with
+    asrun_url: `${PUBLIC_BASE_URL}/api/playout/asrun`,
+    stream_key: channel.stream_key,
+  };
+}
+
+/**
+ * POST /api/channels/:slug/playout/provision   (owner only)
+ * Turns a channel into a scheduled playout channel: mints a playout_token if
+ * absent, sets playout_mode='scheduled', and returns the engine config an
+ * operator (or the Phase 5 supervisor) uses to configure ffplayout.
+ */
+export async function provisionPlayout(req: Request, res: Response): Promise<void> {
+  const uid = authUserIdOr401(req, res);
+  if (!uid) return;
+  try {
+    const { rows } = await pool.query(
+      "SELECT id, owner_id, stream_key, playout_token FROM channels WHERE slug = $1 LIMIT 1",
+      [req.params.slug]
+    );
+    if (rows.length === 0) { res.status(404).json({ error: "Channel not found" }); return; }
+    const ch = rows[0];
+    if (ch.owner_id !== uid) { res.status(403).json({ error: "Only the channel owner can provision playout" }); return; }
+
+    const token: string = ch.playout_token || crypto.randomBytes(24).toString("hex");
+    const upd = await pool.query(
+      `UPDATE channels
+          SET playout_token = $2, playout_mode = 'scheduled'
+        WHERE id = $1
+        RETURNING id, stream_key, playout_token`,
+      [ch.id, token]
+    );
+    res.json({ config: buildPlayoutConfig(upd.rows[0]) });
+  } catch (err) {
+    console.error("provisionPlayout error:", err);
+    res.status(500).json({ error: "Failed to provision playout" });
+  }
+}
+
+/**
+ * GET /api/channels/:slug/playout/config   (owner only)
+ * Read-only view of the engine config. 409 if the channel isn't provisioned yet.
+ */
+export async function getPlayoutConfig(req: Request, res: Response): Promise<void> {
+  const uid = authUserIdOr401(req, res);
+  if (!uid) return;
+  try {
+    const { rows } = await pool.query(
+      "SELECT id, owner_id, stream_key, playout_token, playout_mode FROM channels WHERE slug = $1 LIMIT 1",
+      [req.params.slug]
+    );
+    if (rows.length === 0) { res.status(404).json({ error: "Channel not found" }); return; }
+    const ch = rows[0];
+    if (ch.owner_id !== uid) { res.status(403).json({ error: "Only the channel owner can view playout config" }); return; }
+    if (!ch.playout_token) { res.status(409).json({ error: "Channel is not provisioned for playout" }); return; }
+    res.json({ config: buildPlayoutConfig(ch), playout_mode: ch.playout_mode });
+  } catch (err) {
+    console.error("getPlayoutConfig error:", err);
+    res.status(500).json({ error: "Failed to read playout config" });
+  }
+}
 
 /**
  * GET /api/playout/pl/:token/:year/:month/:date
