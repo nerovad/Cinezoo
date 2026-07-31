@@ -20,6 +20,13 @@ import {
   removeChannelContributor,
 } from "../controllers/contributionController";
 import { uploadMedia, listMedia, deleteMedia, mediaUpload } from "../controllers/mediaController";
+import {
+  listSegments,
+  addSegment,
+  updateSegment,
+  reorderSegments,
+  deleteSegment,
+} from "../controllers/segmentController";
 import { authenticateToken, requireGroup, AuthRequest } from "../middleware/authMiddleware";
 
 const router = express.Router();
@@ -113,6 +120,33 @@ router.get("/:slug/media", authenticateToken, (req: Request, res: Response, next
 // DELETE /api/channels/:slug/media/:id - owner removes a media item and its file
 router.delete("/:slug/media/:id(\\d+)", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
   deleteMedia(req, res, next);
+});
+
+// --- Scheduler (Phase 4): the ordered segment list that becomes the playlist ---
+
+// GET /api/channels/:slug/segments - the ordered program list (owner)
+router.get("/:slug/segments", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
+  listSegments(req, res, next);
+});
+
+// POST /api/channels/:slug/segments - append a segment from a media item
+router.post("/:slug/segments", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
+  addSegment(req, res, next);
+});
+
+// POST /api/channels/:slug/segments/reorder - drag-and-drop write { ordered_ids }
+router.post("/:slug/segments/reorder", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
+  reorderSegments(req, res, next);
+});
+
+// PATCH /api/channels/:slug/segments/:id - adjust trim/category
+router.patch("/:slug/segments/:id(\\d+)", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
+  updateSegment(req, res, next);
+});
+
+// DELETE /api/channels/:slug/segments/:id - remove a segment
+router.delete("/:slug/segments/:id(\\d+)", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
+  deleteSegment(req, res, next);
 });
 
 // GET /api/channels/:slug (get single channel by slug)

@@ -1,5 +1,69 @@
 import { Request, Response } from "express";
 import pool from "../db/pool";
+import { buildDayPlaylist, SegmentRow } from "../services/playlist";
+
+/**
+ * GET /api/playout/pl/:token/:year/:month/:date
+ *
+ * The URL ffplayout is pointed at (its `playlists` config = the /pl/:token
+ * base). The engine fetches `<base>/YYYY/MM/YYYY-MM-DD.json` and reloads when
+ * Last-Modified changes. The token both identifies the channel and authorizes
+ * the pull (it is a per-channel secret, never shown in a browser), so no bearer
+ * header is needed.
+ *
+ * :date is the filename, e.g. "2026-07-21.json".
+ */
+export async function getPlaylist(req: Request, res: Response): Promise<void> {
+  const token = String(req.params.token || "").trim();
+  const dateName = String(req.params.date || "");
+  const dateMatch = dateName.match(/^(\d{4}-\d{2}-\d{2})\.json$/);
+  if (!token || !dateMatch) {
+    res.status(400).send("bad request");
+    return;
+  }
+  const date = dateMatch[1];
+
+  try {
+    const chan = await pool.query(
+      `SELECT id, COALESCE(display_name, name) AS label, schedule_rev
+         FROM channels WHERE playout_token = $1 LIMIT 1`,
+      [token]
+    );
+    if (chan.rowCount === 0) {
+      res.status(404).send("unknown channel");
+      return;
+    }
+    const channel = chan.rows[0];
+
+    // Last-Modified / If-Modified-Since: how ffplayout avoids re-parsing an
+    // unchanged playlist. schedule_rev bumps on any segment mutation.
+    const lastModified = new Date(channel.schedule_rev);
+    const ims = req.headers["if-modified-since"];
+    if (ims && new Date(ims).getTime() >= Math.floor(lastModified.getTime() / 1000) * 1000) {
+      res.status(304).end();
+      return;
+    }
+
+    const seg = await pool.query(
+      `SELECT m.storage_path, m.title, s.in_ms, s.out_ms,
+              m.duration_ms AS media_duration_ms, s.category
+         FROM channel_segments s
+         JOIN channel_media m ON m.id = s.media_id
+        WHERE s.channel_id = $1 AND m.conform_status = 'ready'
+        ORDER BY s.position ASC`,
+      [channel.id]
+    );
+
+    const playlist = buildDayPlaylist(channel.label || "Channel", date, seg.rows as SegmentRow[]);
+
+    res.set("Last-Modified", lastModified.toUTCString());
+    res.set("Cache-Control", "no-cache");
+    res.json(playlist);
+  } catch (err) {
+    console.error("getPlaylist error:", err);
+    res.status(500).send("playlist error");
+  }
+}
 
 /**
  * As-run reporting endpoint.
