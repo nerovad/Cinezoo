@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from "react";
+import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 import "./Menu.scss";
@@ -10,6 +10,10 @@ import TournamentBracket from "./TournamentBracket";
 import AboutWidget from "./AboutWidget";
 import NowPlayingWidget from "./NowPlayingWidget";
 import ContributionsWidget from "./ContributionsWidget";
+
+// Lava lamp blobs — each index maps to a .lava-blob--N size/position/tempo
+// variant in Menu.scss
+const LAVA_BLOBS = [1, 2, 3, 4, 5, 6] as const;
 
 /* === VIEWER COUNT FORMATTING === */
 // <100: exact number (single digits e.g. 1, 23, 99)
@@ -485,20 +489,22 @@ const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = fal
     return () => { on = false; };
   }, [channelId]);
 
-  // Randomize lava lamp animation delays when sidebar opens
+  // Drop each blob at a random point in its own cycle the first time the
+  // sidebar opens, so the lamp never looks like it just started up. Runs
+  // once — re-rolling on every open would visibly teleport the wax.
+  const lavaSeeded = useRef(false);
   useEffect(() => {
-    if (!isOpen) return;
-    const lavaContainer = document.querySelector('.lava-lamp-bg') as HTMLElement;
-    if (!lavaContainer) return;
+    if (!isOpen || lavaSeeded.current) return;
 
-    // Randomize animation delays for organic movement
-    const randomDelay1 = -Math.random() * 20;
-    const randomDelay2 = -Math.random() * 16;
-    const randomDelay3 = -Math.random() * 14;
+    const blobs = document.querySelectorAll<HTMLElement>('.lava-blob');
+    if (!blobs.length) return;
 
-    lavaContainer.style.setProperty('--blob1-delay', `${randomDelay1}s`);
-    lavaContainer.style.setProperty('--blob2-delay', `${randomDelay2}s`);
-    lavaContainer.style.setProperty('--blob3-delay', `${randomDelay3}s`);
+    blobs.forEach((blob) => {
+      // A negative delay starts the animation already in progress
+      const duration = parseFloat(getComputedStyle(blob).animationDuration) || 24;
+      blob.style.setProperty('--delay', `${-Math.random() * duration}s`);
+    });
+    lavaSeeded.current = true;
   }, [isOpen]);
 
   const currentFilm: Film | null = films.length ? films[idx % films.length] : null;
@@ -581,7 +587,33 @@ const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = fal
       )}
 
       <div className={`utilities-container ${isOpen ? "open" : ""} ${isMobile ? "mobile" : ""} ${mobileInline ? "mobile-inline" : ""}`}>
-        <div className="lava-lamp-bg"></div>
+        <div className="lava-lamp-bg" aria-hidden="true">
+          {/* Goo filter: blur, then crush the alpha ramp back to a hard edge.
+              Blobs that overlap after blurring fuse into one silhouette, which
+              is what gives the wax its surface tension. */}
+          <svg className="lava-defs" aria-hidden="true" focusable="false">
+            <defs>
+              <filter id="lava-goo">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur" />
+                <feColorMatrix
+                  in="blur"
+                  mode="matrix"
+                  values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 24 -10"
+                />
+              </filter>
+            </defs>
+          </svg>
+
+          <div className="lava-glow" />
+
+          <div className="lava-goo">
+            <div className="lava-pool" />
+            <div className="lava-cap" />
+            {LAVA_BLOBS.map((n) => (
+              <div key={n} className={`lava-blob lava-blob--${n}`} />
+            ))}
+          </div>
+        </div>
 
         <div className={`utilities-menu ${isOpen ? "open" : ""}`}>
           {/* Mobile close button — only in sidebar mode, not inline */}
