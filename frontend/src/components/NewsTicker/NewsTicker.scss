@@ -64,6 +64,63 @@
   @include sc-led-text(26px, 0.14em);
 }
 
+/* Separator between segments. Dimmer than the copy so the strip reads as one
+   continuous readout rather than a list of things. */
+.ticker-separator {
+  white-space: pre;
+  line-height: 1;
+  @include sc-led-text(26px, 0.14em);
+  color: $sc-led-amber-dim;
+  opacity: 0.45;
+  text-shadow: none;
+
+  /* The spacing between segments lives here rather than in the markup, so
+     nothing depends on non-breaking spaces in the component. */
+  padding: 0 1.2em;
+}
+
+/* ── Paid sponsor segment ─────────────────────────────────────────────
+   Same phosphor, same grid, same type. The slot is distinguished by the
+   "Sponsored by" label being dimmer than the message it introduces — not
+   by a box, a border, a background, or a logo.
+
+   That restraint is the point. A raster logo dropped onto a dot-matrix
+   panel breaks the illusion instantly and makes the whole strip read as a
+   banner ad, which is the one thing viewers have trained themselves not to
+   look at. The LED treatment is what the slot is worth paying for. */
+/* Doubled class for specificity (0,2,0). The responsive blocks below re-apply
+   sc-led-text to .ticker-item, which resets `color` — without the extra
+   weight the sponsor tint would silently vanish on mobile. */
+.ticker-item.ticker-item--sponsor {
+  /* Marginally hotter than editorial copy — reads as emphasis, not as a
+     different kind of object. */
+  color: #ffc65a;
+}
+
+.ticker-item__sponsor-label {
+  color: $sc-led-amber-dim;
+  opacity: 0.75;
+  text-shadow: 0 0 2px $sc-led-amber-dim;
+}
+
+.ticker-item.ticker-item--link {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+
+  /* The marquee pauses on hover, so this underline is reachable. Drawn with
+     a border rather than text-decoration so it picks up the glow. */
+  &:hover,
+  &:focus-visible {
+    border-bottom: 2px solid currentColor;
+    filter: brightness(1.15);
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
 .ticker-toggle {
   position: absolute;
   right: 14px;
@@ -106,11 +163,18 @@
     }
   }
 
-  .ticker-item {
+  .ticker-item,
+  .ticker-separator {
     @include sc-led-text(15px, 0.1em);
     text-shadow:
       0 0 2px $sc-led-amber,
       0 0 6px rgba(255, 140, 26, 0.7);
+  }
+
+  .ticker-separator {
+    color: $sc-led-amber-dim;
+    text-shadow: none;
+    padding: 0 0.8em;
   }
 
   .ticker-toggle {
@@ -127,8 +191,15 @@
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
-  .ticker-item {
+  .ticker-item,
+  .ticker-separator {
     @include sc-led-text(11px, 0.1em);
+  }
+
+  .ticker-separator {
+    color: $sc-led-amber-dim;
+    text-shadow: none;
+    padding: 0 0.7em;
   }
 
   .ticker-toggle {

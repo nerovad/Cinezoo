@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth, UserGroup } from "../../store/AuthContext";
 import { useNavigate } from "react-router-dom";
 import AnalyticsModal from "../AnalyticsModal/AnalyticsModal";
+import TickerManager from "../Admin/TickerManager";
 import "./Admin.scss";
 
 interface UserRow {
@@ -463,6 +464,8 @@ const Admin: React.FC = () => {
           </div>
         )}
       </section>
+
+      <TickerManager token={token} />
 
       <AnalyticsModal
         isOpen={analyticsChannelId !== null}
