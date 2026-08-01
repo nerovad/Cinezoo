@@ -32,7 +32,7 @@ class OnDemandPlayout {
     this.pool = pool;
     this.enabled = (process.env.PLAYOUT_ONDEMAND_ENABLED || "false").toLowerCase() === "true";
     this.graceMs = Number(process.env.PLAYOUT_GRACE_MS) || 90_000;
-    this.driver = engineDriverFromEnv();
+    this.driver = engineDriverFromEnv(pool);
     if (this.enabled) {
       console.log(`[playout] on-demand supervisor enabled (grace ${this.graceMs}ms)`);
     }

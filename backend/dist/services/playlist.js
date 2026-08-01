@@ -16,8 +16,14 @@ const MAX_ITEMS = 100000; // safety bound against pathological zero-length loops
  * Build a full-day playlist by looping `segments` until `targetSeconds` of
  * PLAYING time (out - in) is reached. Field names/units match ffplayout: floats
  * in seconds, wire name `in` (not `seek`), playing time is out - in.
+ *
+ * `storageRoot`, when given, is prefixed to each segment's (relative)
+ * storage_path to produce an ABSOLUTE `source`. ffplayout resolves playlist
+ * sources as absolute filesystem paths — a bare filename does not resolve
+ * against the channel storage. The push-to-engine path must pass the channel's
+ * media_storage_root here; the internal generator (guide/debug) may omit it.
  */
-function buildDayPlaylist(channelLabel, date, segments, targetSeconds = DAY_SECONDS) {
+function buildDayPlaylist(channelLabel, date, segments, targetSeconds = DAY_SECONDS, storageRoot) {
     const program = [];
     const totalLoopSec = segments.reduce((s, seg) => s + Math.max(0, (seg.out_ms - seg.in_ms) / 1000), 0);
     if (segments.length === 0 || totalLoopSec <= 0) {
@@ -32,11 +38,14 @@ function buildDayPlaylist(channelLabel, date, segments, targetSeconds = DAY_SECO
             i++;
             continue;
         }
+        const source = storageRoot
+            ? `${storageRoot.replace(/\/$/, "")}/${seg.storage_path}`
+            : seg.storage_path;
         const item = {
             in: round3(seg.in_ms / 1000),
             out: round3(seg.out_ms / 1000),
             duration: round3(seg.media_duration_ms / 1000),
-            source: seg.storage_path,
+            source,
         };
         if (seg.title)
             item.title = seg.title;

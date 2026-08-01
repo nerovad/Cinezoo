@@ -10,6 +10,7 @@ const filmController_1 = require("../controllers/filmController");
 const contributionController_1 = require("../controllers/contributionController");
 const mediaController_1 = require("../controllers/mediaController");
 const segmentController_1 = require("../controllers/segmentController");
+const playoutController_1 = require("../controllers/playoutController");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const router = express_1.default.Router();
 // GET /api/channels/mine - MUST be before /:slug to avoid conflicts
@@ -104,6 +105,15 @@ router.patch("/:slug/segments/:id(\\d+)", authMiddleware_1.authenticateToken, (r
 // DELETE /api/channels/:slug/segments/:id - remove a segment
 router.delete("/:slug/segments/:id(\\d+)", authMiddleware_1.authenticateToken, (req, res, next) => {
     (0, segmentController_1.deleteSegment)(req, res, next);
+});
+// --- Playout provisioning (Phase 5): turn a channel into a scheduled channel ---
+// POST /api/channels/:slug/playout/provision - mint token, set scheduled, emit engine config
+router.post("/:slug/playout/provision", authMiddleware_1.authenticateToken, (req, res, next) => {
+    (0, playoutController_1.provisionPlayout)(req, res).catch(next);
+});
+// GET /api/channels/:slug/playout/config - read the engine config (owner)
+router.get("/:slug/playout/config", authMiddleware_1.authenticateToken, (req, res, next) => {
+    (0, playoutController_1.getPlayoutConfig)(req, res).catch(next);
 });
 // GET /api/channels/:slug (get single channel by slug)
 router.get("/:slug", (req, res, next) => {

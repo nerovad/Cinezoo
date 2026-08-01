@@ -276,21 +276,28 @@ truncated in the guide rather than pretending it plays in full.
 GET /api/channels/:slug/playlist/:year/:month/:date.json
 ```
 
-ffplayout pulls its playlist over HTTP when a channel's `playlists` config is a
-URL: it fetches `<url>/YYYY/MM/YYYY-MM-DD.json` and uses `Last-Modified` for
-change detection (`json_serializer.rs:114-130`). So Cinezoo serves playlists at
-the matching layout — no POST, no login, no daemon; the scheduler is the source
-of truth automatically.
+**CORRECTED by Phase 5 integration (see §13):** the original design assumed
+ffplayout *pulls* a playlist from an HTTP URL. It does not. Stock ffplayout v2
+stores playlists locally and receives them over its API; only individual clip
+`source`s may be remote URLs. So Cinezoo **pushes** instead:
 
-- Must return a correct **`Last-Modified`** header — that is how the engine
-  decides whether to reload. Derive it from `max(updated_at)` across the
-  channel's segments so a reorder invalidates it immediately.
-- Authenticate with `channels.playout_token` as a path/query component. The URL
-  is configured once in ffplayout and never seen by a browser, so a bearer
-  header isn't available.
-- Because playout is co-located, a **local file** the engine reads directly is a
-  valid alternative to HTTP pull. HTTP keeps a clean boundary and one code path;
-  either works.
+```
+login → configure the channel's stream output → POST the day playlist → control: start
+```
+
+- **`POST /api/playlist/{id}`** takes a full `{ channel, date, program }` JSON.
+  It 409s if a playlist for that date already exists, so replace idempotently:
+  `DELETE /api/playlist/{id}/{date}` then POST (`FfplayoutClient.pushPlaylist`).
+- Playlist `source` **must be an absolute filesystem path**
+  (`<media_storage_root>/<file>`) — a bare filename does not resolve against the
+  channel storage. `buildDayPlaylist(..., storageRoot)` prefixes it.
+- Re-push whenever `channels.schedule_rev` changes (a reorder/add/remove) so a
+  running engine reloads the new order. `schedule_rev` and the internal
+  `GET /api/playout/pl/:token/...` generator are still used — as the *source of
+  the pushed JSON*, not as an endpoint the engine calls.
+- The channel's stream **output is selected by `output.id`** (the row whose name
+  is `stream`), not a free-form mode string; set its `stream_url` to the tower
+  and enable the as-run `task` in the same `PUT /api/playout/config/{id}`.
 
 ---
 
@@ -486,7 +493,7 @@ stream — which also breaks seamless joins and as-run. YouTube is fine only as 
 
 | Method | Path | Auth | Status |
 |---|---|---|---|
-| GET | `/api/playout/pl/:token/:year/:month/:date.json` | `playout_token` | ✓ built |
+| GET | `/api/playout/pl/:token/:year/:month/:date.json` | `playout_token` | ✓ built — now the internal playlist **generator** behind the push (§5), not an endpoint ffplayout pulls |
 | POST | `/api/playout/asrun` | `X-Stream-Key` | ✓ built |
 | GET | `/api/channels/:slug/media` | JWT, owner | ✓ built |
 | POST | `/api/channels/:slug/media` (streaming multipart → conform) | JWT, owner | ✓ built |
@@ -588,19 +595,38 @@ media library + upload with conform polling on the left, reorderable timeline
 **Contributions rewiring** (accepted pitch → append a `channel_segments` row)
 and the `ContributionsWidget` `film_id` fix remain open follow-ups.
 
-**→ Phase 5 — the real ffplayout + on-demand encoding. IN PROGRESS.** Two parts:
-1. **Integration** — stand up a real ffplayout against a real channel's playlist
-   URL + as-run endpoint and confirm the full loop end-to-end. This is the one
-   seam nothing above has exercised (Phase 1 used an ffmpeg stand-in). Needs a
-   channel provisioning step (mint `playout_token`, set `playout_mode`, emit the
-   engine config) and a config/runbook.
-2. **On-demand encoding** — a playout supervisor that starts a channel's engine
-   on the first viewer, seeks to `resolve(now).offset` so it joins mid-loop, and
-   tears down after the last viewer leaves. The cost optimization (§14); only
-   worth it once the fleet is real.
+**→ Phase 5 — the real ffplayout + on-demand encoding.**
+1. **Integration — DONE.** Ran a real ffplayout v2.0.0-rc5 against channel-12
+   (id 63) end-to-end and proved the whole loop: Cinezoo scheduler → ffplayout
+   playing our ordered segment loop → RTMP → nginx-rtmp tower → HLS; as-run
+   firing per clip into `channel_asrun`; "Now Playing" reflecting the as-run
+   ground truth; wall-clock join mid-loop; clean clip boundaries. The compiled
+   `FfplayoutApiDriver` (not hand calls) drove the verified start.
 
-Everything above Phase 5 is built and unit/integration-tested against a
-throwaway Postgres and ffmpeg; the untested seam is a live ffplayout process.
+   **Findings the real engine forced (all fixed):**
+   - **Push, not pull.** Playlists are POSTed, not fetched — see §5.
+     `FfplayoutClient` + `FfplayoutApiDriver`; `getPlaylist`/`schedule_rev` are
+     now the internal generator behind the push, not a pulled endpoint.
+   - **Absolute sources.** `buildDayPlaylist(..., storageRoot)` emits
+     `<media_storage_root>/<file>`; a bare filename won't play.
+   - **As-run attribution.** ffplayout reports the absolute `source`;
+     `recordAsRun` now matches `channel_media.storage_path` by basename, so
+     `segment_id` resolves again (verified: rows attributed 2/2/3).
+   - **Channel lifecycle.** ffplayout's in-memory manager only holds channels
+     created via `POST /api/channel`; a process restart empties it, and the
+     active output is chosen by `output.id`. The supervisor/provisioner must
+     register + configure the channel through the API, not assume DB rows.
+   - **FFmpeg pin.** The prebuilt binary needs FFmpeg 7; production `.deb`
+     handles it, dev used a Debian-trixie container wrapper.
+2. **On-demand encoding** — a playout supervisor that starts a channel's engine
+   on the first viewer (ffplayout clock-syncs the join) and tears down after the
+   last viewer leaves. Built (`onDemandPlayout.ts`, env-gated, default-off) and
+   now wired to the push-based `FfplayoutApiDriver`; the remaining work is the
+   process-per-channel orchestration (spin-up + per-channel base URL) implied by
+   the cost model (§14).
+
+Everything above is built and unit/integration-tested; Phase 5 part 1 is proven
+against a live ffplayout process.
 
 ---
 

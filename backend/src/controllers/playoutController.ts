@@ -218,14 +218,21 @@ export async function recordAsRun(req: Request, res: Response): Promise<void> {
     // Best-effort attribution back to a scheduled segment. Returns null until
     // the scheduler (Phase 4) populates channel_media / channel_segments; the FK
     // is nullable, so recording an unmatched airing is fine.
+    //
+    // ffplayout reports `source` as the ABSOLUTE path it played
+    // (<media_storage_root>/<file>), while channel_media.storage_path is stored
+    // relative to that root. Match on the basename so attribution works whether
+    // the engine reports an absolute or relative source.
+    const sourceBasename = source.split("/").pop() || source;
     const seg = await pool.query(
       `SELECT s.id
          FROM channel_segments s
          JOIN channel_media m ON m.id = s.media_id
-        WHERE s.channel_id = $1 AND m.storage_path = $2
+        WHERE s.channel_id = $1
+          AND (m.storage_path = $2 OR m.storage_path = $3)
         ORDER BY s.position
         LIMIT 1`,
-      [channelId, source]
+      [channelId, source, sourceBasename]
     );
     const segmentId = seg.rowCount ? seg.rows[0].id : null;
 
