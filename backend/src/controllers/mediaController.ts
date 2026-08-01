@@ -1,3 +1,8 @@
+/// <reference path="../types/multer.d.ts" />
+// The multer shim is an ambient .d.ts. tsc picks it up via tsconfig "include",
+// but ts-node/ts-node-dev compile only the entry file's import graph and ignore
+// "include" — so without this reference the shim is invisible in dev and the
+// server dies on an implicit-any for "multer" while `npm run build` succeeds.
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
