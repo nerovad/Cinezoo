@@ -140,17 +140,13 @@ const SearchNavBar: React.FC<NavBarProps> = ({
     v.volume = newVolume;
     if (newVolume > 0) {
       previousVolumeRef.current = newVolume;
-      if (v.muted) {
-        // Clear the mute flag directly so channel switches still auto-unmute,
-        // and update local state so the icon swaps without waiting for the event.
-        v.muted = false;
-        setIsMuted(false);
-      }
-    } else {
-      // Sliding to 0 silences without marking the user as "explicitly muted".
-      v.muted = true;
-      setIsMuted(true);
+      // Go through toggleMute so the player's stored mute preference —
+      // the thing that decides whether the next channel loads muted —
+      // stays in step with the element.
+      if (v.muted) toggleMute();
     }
+    // Sliding to 0 is already silent; leave the mute flag alone so it doesn't
+    // masquerade as a deliberate mute. The icon below treats volume 0 as muted.
   };
 
   const handleMuteClick = () => {

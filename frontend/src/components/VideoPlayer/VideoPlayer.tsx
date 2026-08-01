@@ -51,8 +51,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
   const switchingRef = useRef(false);
   const retryRef = useRef(0);
   const initialLoadRef = useRef(false);
-  const hasUserInteractedRef = useRef(false);
-  const userExplicitlyMutedRef = useRef(false);
+  // The user's mute preference, and the only thing that decides whether a
+  // newly loaded video is muted. Starts muted (autoplay policy) and only
+  // changes when the user hits a mute control.
+  const mutedRef = useRef(true);
   const goToNextVideoRef = useRef<(() => void) | null>(null);
   const intermissionVideoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -66,8 +68,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [channelName, setChannelName] = useState("");
-  const [, setIsMuted] = useState(true);
-  const [showMuteIcon, setShowMuteIcon] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
   const [showIntermission, setShowIntermission] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [videoLinks, setVideoLinks] = useState<VideoLink[]>([
@@ -130,9 +131,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     cleanupHls();
     setShowIntermission(false);
 
-    // Only force mute on the very first load (browser autoplay policy).
-    // After the user has unmuted, preserve their preference on channel switches.
-    const shouldMute = !hasUserInteractedRef.current;
+    // Every load honours the user's preference — nothing else flips it.
+    const shouldMute = mutedRef.current;
 
     if (src.endsWith(".mp4")) {
       console.log("[loadVideo] Loading MP4, attaching ended listener");
@@ -142,8 +142,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
       v.play().catch(() => {
         // If play fails unmuted, mute and retry (browser policy)
         v.muted = true;
-        setIsMuted(true);
-        setShowMuteIcon(true);
         v.play().catch(() => { });
       });
       return;
@@ -184,8 +182,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
         v.muted = shouldMute;
         v.play().catch(() => {
           v.muted = true;
-          setIsMuted(true);
-          setShowMuteIcon(true);
           v.play().catch(() => { });
         });
       });
@@ -223,8 +219,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
       vtag.muted = shouldMute;
       vtag.play().catch(() => {
         vtag.muted = true;
-        setIsMuted(true);
-        setShowMuteIcon(true);
         vtag.play().catch(() => { });
       });
       return;
@@ -267,10 +261,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     if (!v) return;
     const muted = !v.muted;
     v.muted = muted;
-    userExplicitlyMutedRef.current = muted;
-    if (!muted) hasUserInteractedRef.current = true;
+    mutedRef.current = muted;
     setIsMuted(muted);
-    setShowMuteIcon(muted);
   };
 
   const toggleFullscreen = () => {
@@ -294,54 +286,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     checkVideo();
   }, []);
 
-  // Arm sound on the first real user gesture. Browsers only allow unmuted
-  // playback after a genuine interaction (click/tap/keypress) — flipping
-  // hasUserInteractedRef from an `ended` event doesn't count, so on a true
-  // first visit the auto-unmute on channel switch gets rejected and the
-  // catch handler re-mutes. The first gesture of any kind unlocks audio
-  // for the rest of the session.
-  useEffect(() => {
-    const remove = () => {
-      document.removeEventListener("pointerdown", armSound, true);
-      document.removeEventListener("keydown", armSound, true);
-    };
-    const armSound = (e: Event) => {
-      // Let the mute controls and M key go through toggleMute instead, so a
-      // deliberate click on a mute button isn't pre-empted by this handler
-      // flipping the state first (which would invert the button's action).
-      // NOTE: don't bail on hasUserInteractedRef here — the channel-switch
-      // auto-unmute sets it optimistically without a real gesture, so on a
-      // first visit it's already true while the video is still muted.
-      if (e instanceof KeyboardEvent && e.key.toLowerCase() === "m") return;
-      if ((e.target as HTMLElement | null)?.closest?.(".mute-icon-overlay, .mute-button")) return;
-
-      hasUserInteractedRef.current = true;
-      remove();
-
-      if (userExplicitlyMutedRef.current) return;
-      const v = videoRef.current;
-      // Keep the color-bars boot screen silent; unmute anything after it.
-      if (v && v.muted && !v.src.includes("Color_Bars")) {
-        v.muted = false;
-        setIsMuted(false);
-        setShowMuteIcon(false);
-      }
-    };
-    document.addEventListener("pointerdown", armSound, true);
-    document.addEventListener("keydown", armSound, true);
-    return remove;
-  }, []);
-
   // Mirror the video element's muted state into the overlay icon, so any
   // path that flips muted (slider, M key, remote, programmatic) stays in sync.
   useEffect(() => {
     if (!isVideoReady) return;
     const v = videoRef.current;
     if (!v) return;
-    const sync = () => {
-      setIsMuted(v.muted);
-      setShowMuteIcon(v.muted);
-    };
+    const sync = () => setIsMuted(v.muted);
     v.addEventListener("volumechange", sync);
     return () => v.removeEventListener("volumechange", sync);
   }, [isVideoReady]);
@@ -375,7 +326,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     intermissionVideoRef.current = el;
     if (!el) return;
     const main = videoRef.current;
-    el.muted = main ? main.muted : !hasUserInteractedRef.current;
+    el.muted = main ? main.muted : mutedRef.current;
     if (main) el.volume = main.volume;
   }, []);
 
@@ -456,15 +407,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
       console.log("[VideoPlayer] Loading video:", videoLinks[idx]);
       setCurrentIndex(idx);
       const link = videoLinks[idx];
-
-      // Auto-unmute when switching away from the initial channel,
-      // unless the user explicitly muted. Must happen BEFORE loadVideo
-      // so that shouldMute evaluates to false inside loadVideo.
-      if (initialLoadRef.current && !userExplicitlyMutedRef.current) {
-        hasUserInteractedRef.current = true;
-        setIsMuted(false);
-        setShowMuteIcon(false);
-      }
 
       loadVideo(link.src);
       setChannelId(link.channel);
@@ -561,7 +503,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
         <div className="db-originals-next-button" onClick={goToNextVideo}>
           <div className="channelnumber">{channelName}</div>
         </div>
-        {showMuteIcon && <img src={muteIcon} alt="Muted" className="mute-icon-overlay" onClick={(e) => { e.stopPropagation(); toggleMute(); }} />}
+        {isMuted && <img src={muteIcon} alt="Muted" className="mute-icon-overlay" onClick={(e) => { e.stopPropagation(); toggleMute(); }} />}
       </div>
 
       <Chatbox isOpen={isChatOpen} setIsOpen={() => { }} />
