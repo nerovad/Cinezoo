@@ -318,6 +318,19 @@ const SearchNavBar: React.FC<NavBarProps> = ({
     }
   };
 
+  // Rendered left of the search bar on desktop; the left section is hidden on
+  // mobile, so there it rides along with the right-hand cluster instead.
+  const channelButtons = (
+    <div className="control-pill__group control-pill__group--channel">
+      <button className="channel-button" onClick={goToPreviousVideo}>
+        <img src={ChannelArrow} alt="Previous Channel" className="channel-arrow-icon" />
+      </button>
+      <button className="channel-button channel-button--up" onClick={goToNextVideo}>
+        <img src={ChannelArrow} alt="Next Channel" className="channel-arrow-icon" />
+      </button>
+    </div>
+  );
+
   return (
     <div className={`search-navbar ${isMobile ? 'search-navbar--mobile' : ''}`}>
       {/* Mobile portrait: hamburger menu for panel switching */}
@@ -354,80 +367,15 @@ const SearchNavBar: React.FC<NavBarProps> = ({
       {/* Mobile landscape: spacer */}
       {isMobile && !isMobilePortrait && <div style={{ width: 20 }} />}
 
-      {/* Left Logo - hidden on mobile */}
+      {/* Left Logo + channel/guide controls - hidden on mobile */}
       {!isMobile && (
         <div className="search-navbar__left">
           <a href="/">
             <img src={Logo} alt="Cinezoo" className="search-navbar__logo" />
           </a>
-        </div>
-      )}
 
-      {/* Center Controls — Pill Bar */}
-      <div className="search-navbar__center">
-        <div className="control-pill">
-          <div className="control-pill__group control-pill__group--channel">
-            <button className="channel-button" onClick={goToPreviousVideo}>
-              <img src={ChannelArrow} alt="Previous Channel" className="channel-arrow-icon" />
-            </button>
-            <button className="channel-button channel-button--up" onClick={goToNextVideo}>
-              <img src={ChannelArrow} alt="Next Channel" className="channel-arrow-icon" />
-            </button>
-          </div>
-
-          {!isMobile && (
-            <div className="control-pill__group">
-              <button
-                className="search-navbar__tv-guide-button"
-                onClick={(e) => { e.preventDefault(); setIsGuideOpen?.((prev) => !prev); }}
-              >
-                <img src={TvGuide} alt="TV Guide" />
-              </button>
-            </div>
-          )}
-
-          <div className="control-pill__group control-pill__group--search">
-            <div className="search-navbar__channel-input-container" ref={searchContainerRef}>
-              <input
-                type="text"
-                value={channelInput}
-                onChange={handleInputChange}
-                onFocus={handleInputFocus}
-                onBlur={handleInputBlur}
-                placeholder={isSearchFocused ? "" : placeholderText}
-                className="channel-input"
-                onKeyDown={handleKeyDown}
-              />
-              {!isMobile && (
-                <button className="channel-go-button" onClick={goToChannel}>
-                  Go
-                </button>
-              )}
-
-              {showSearchDropdown && searchResults.length > 0 && (
-                <div className="search-dropdown">
-                  {searchResults.map(({ channel, matchType, matchedTag }, index) => (
-                    <div
-                      key={channel.channel}
-                      className={`search-dropdown__item ${index === selectedResultIndex ? 'search-dropdown__item--selected' : ''}`}
-                      onClick={() => selectChannel(channel)}
-                      onMouseEnter={() => setSelectedResultIndex(index)}
-                    >
-                      <span className="search-dropdown__channel-number">{channel.channelNumber}</span>
-                      <span className="search-dropdown__channel-name">
-                        {channel.displayName || channel.channel}
-                      </span>
-                      {matchType === 'tag' && matchedTag && (
-                        <span className="search-dropdown__tag">#{matchedTag}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {!isMobile && (
+          <div className="control-pill search-navbar__controls">
+            {channelButtons}
             <div
               className={`control-pill__group control-pill__group--volume ${showVolumeSlider ? 'control-pill__group--volume-open' : ''}`}
               ref={volumeGroupRef}
@@ -454,6 +402,64 @@ const SearchNavBar: React.FC<NavBarProps> = ({
                 />
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Center — Search bar (stays put) */}
+      <div className="search-navbar__center">
+        <div className="search-navbar__channel-input-container" ref={searchContainerRef}>
+          <input
+            type="text"
+            value={channelInput}
+            onChange={handleInputChange}
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
+            placeholder={isSearchFocused ? "" : placeholderText}
+            className="channel-input"
+            onKeyDown={handleKeyDown}
+          />
+          {!isMobile && (
+            <button className="channel-go-button" onClick={goToChannel}>
+              Go
+            </button>
+          )}
+
+          {showSearchDropdown && searchResults.length > 0 && (
+            <div className="search-dropdown">
+              {searchResults.map(({ channel, matchType, matchedTag }, index) => (
+                <div
+                  key={channel.channel}
+                  className={`search-dropdown__item ${index === selectedResultIndex ? 'search-dropdown__item--selected' : ''}`}
+                  onClick={() => selectChannel(channel)}
+                  onMouseEnter={() => setSelectedResultIndex(index)}
+                >
+                  <span className="search-dropdown__channel-number">{channel.channelNumber}</span>
+                  <span className="search-dropdown__channel-name">
+                    {channel.displayName || channel.channel}
+                  </span>
+                  {matchType === 'tag' && matchedTag && (
+                    <span className="search-dropdown__tag">#{matchedTag}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right Links & Profile/Login — controls sit between search and profile */}
+      <div className="search-navbar__links">
+        <div className="control-pill search-navbar__controls">
+          {isMobile && channelButtons}
+
+          {!isMobile && (
+            <button
+              className="search-navbar__tv-guide-button"
+              onClick={(e) => { e.preventDefault(); setIsGuideOpen?.((prev) => !prev); }}
+            >
+              <img src={TvGuide} alt="TV Guide" />
+            </button>
           )}
 
           <button
@@ -476,10 +482,7 @@ const SearchNavBar: React.FC<NavBarProps> = ({
             <img src={Fullscreen} alt="Fullscreen" />
           </button>
         </div>
-      </div>
 
-      {/* Right Links & Profile/Login */}
-      <div className="search-navbar__links">
         {isLoading ? (
           <span className="search-navbar__loading">...</span>
         ) : !isAuthenticated ? (
