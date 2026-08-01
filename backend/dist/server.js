@@ -11,7 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
-var _a;
+var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 const path_1 = __importDefault(require("path"));
 const dotenv_1 = __importDefault(require("dotenv"));
@@ -30,11 +30,14 @@ const pool_1 = __importDefault(require("./db/pool"));
 const channelRoutes_1 = __importDefault(require("./routes/channelRoutes"));
 const festivalRoutes_1 = __importDefault(require("./routes/festivalRoutes"));
 const filmRoutes_1 = __importDefault(require("./routes/filmRoutes"));
-const body_parser_1 = __importDefault(require("body-parser"));
 const rtmpRoutes_1 = __importDefault(require("./routes/rtmpRoutes"));
+const playoutRoutes_1 = __importDefault(require("./routes/playoutRoutes"));
 const awardRoutes_1 = __importDefault(require("./routes/awardRoutes"));
 const companyRoutes_1 = __importDefault(require("./routes/companyRoutes"));
 const tournamentRoutes_1 = __importDefault(require("./routes/tournamentRoutes"));
+const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
+const savedChannelRoutes_1 = __importDefault(require("./routes/savedChannelRoutes"));
+const contributionRoutes_1 = __importDefault(require("./routes/contributionRoutes"));
 dotenv_1.default.config({ path: path_1.default.resolve(__dirname, "../../.env") });
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
@@ -49,7 +52,10 @@ const io = new socket_io_1.Server(server, {
 const PORT = process.env.PORT || 4000;
 // Middleware
 app.use(express_1.default.json({ limit: '10mb' })); // Increased limit for base64 images
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)({
+    origin: ((_b = process.env.CORS_ORIGIN) === null || _b === void 0 ? void 0 : _b.split(",")) || ["http://localhost:5173"],
+    credentials: true,
+}));
 // Serve uploaded files
 app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '../uploads')));
 // Routes
@@ -66,9 +72,10 @@ app.use("/api/awards", awardRoutes_1.default);
 app.use("/api/companies", companyRoutes_1.default);
 app.use("/api", tournamentRoutes_1.default);
 app.use("/api/rtmp", rtmpRoutes_1.default);
-app.use(body_parser_1.default.urlencoded({ extended: false }));
-app.use(express_1.default.json());
-app.use((0, cors_1.default)());
+app.use("/api/playout", playoutRoutes_1.default);
+app.use("/api/admin", adminRoutes_1.default);
+app.use("/api/saved-channels", savedChannelRoutes_1.default);
+app.use("/api/contributions", contributionRoutes_1.default);
 // Error Handler
 app.use(errorHandler_1.default);
 // Socket Setup

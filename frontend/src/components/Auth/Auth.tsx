@@ -34,6 +34,10 @@ const Auth: React.FC<AuthProps> = ({ setIsAuthOpen, authMode, setAuthMode }) => 
         body: JSON.stringify({ email: forgotEmail }),
       });
       const data = await res.json();
+      if (!res.ok) {
+        setForgotMessage("Something went wrong. Please try again.");
+        return;
+      }
       setForgotMessage(data.message || "If that email is registered, a temporary password has been sent.");
     } catch {
       setForgotMessage("Something went wrong. Please try again.");

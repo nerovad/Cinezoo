@@ -8,7 +8,11 @@ const express_1 = __importDefault(require("express"));
 const profileController_1 = require("../controllers/profileController");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const router = express_1.default.Router();
-// All profile routes require authentication
+// Public route - get any user's profile by handle (no auth required)
+router.get("/user/:handle", (req, res, next) => {
+    (0, profileController_1.getPublicProfile)(req, res).catch(next);
+});
+// All remaining profile routes require authentication
 router.use(authMiddleware_1.authenticateToken);
 // GET /api/profile/me - Get current user's profile
 router.get("/me", (req, res, next) => {

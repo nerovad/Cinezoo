@@ -154,11 +154,6 @@ router.post(
       const tempPassword = crypto.randomBytes(8).toString("hex");
       const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-      await pool.query("UPDATE users SET password = $1 WHERE id = $2", [
-        hashedPassword,
-        user.id,
-      ]);
-
       // Send email
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
@@ -177,6 +172,13 @@ router.post(
         text: `Your temporary password is: ${tempPassword}\n\nPlease log in and change your password immediately.`,
         html: `<p>Your temporary password is: <strong>${tempPassword}</strong></p><p>Please log in and change your password immediately.</p>`,
       });
+
+      // Only rotate the password once the email is actually on its way, so a
+      // send failure can't lock the user out of an account they can still use.
+      await pool.query("UPDATE users SET password = $1 WHERE id = $2", [
+        hashedPassword,
+        user.id,
+      ]);
 
       res.json({ message: "If that email is registered, a temporary password has been sent." });
       return;

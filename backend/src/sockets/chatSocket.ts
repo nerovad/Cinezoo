@@ -1,5 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { Pool } from "pg";
+import { playoutSupervisor } from "../services/onDemandPlayout";
 
 /** Build top-5 channels by viewer count and broadcast to everyone. */
 async function broadcastViewerCounts(io: Server, pool: Pool) {
@@ -12,6 +13,10 @@ async function broadcastViewerCounts(io: Server, pool: Pool) {
     if (io.sockets.sockets.has(roomId)) continue;
     counts.push({ slug: roomId, viewers: sockets.size });
   }
+
+  // Feed the on-demand playout supervisor the full set of channels with viewers
+  // (not just the top 5). Inert unless on-demand playout is enabled.
+  playoutSupervisor.syncViewerCounts(new Set(counts.map((c) => c.slug)));
 
   // sort descending by viewers, take top 5
   counts.sort((a, b) => b.viewers - a.viewers);

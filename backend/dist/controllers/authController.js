@@ -48,12 +48,12 @@ const login = (req, res, next) => __awaiter(void 0, void 0, void 0, function* ()
         if (!email && !username) {
             return res.status(400).json({ error: "Email or Username is required" });
         }
-        const result = yield pool_1.default.query("SELECT * FROM users WHERE email = COALESCE($1, email) OR username = COALESCE($2, username) LIMIT 1", [email, username]);
+        const result = yield pool_1.default.query("SELECT * FROM users WHERE email = $1 OR username = $2 LIMIT 1", [email || null, username || null]);
         const user = result.rows[0];
         if (!user || !(yield bcrypt_1.default.compare(password, user.password))) {
             return res.status(400).json({ error: "Invalid credentials" });
         }
-        const token = jsonwebtoken_1.default.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+        const token = jsonwebtoken_1.default.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "30d" });
         res.json({ token });
     }
     catch (error) {

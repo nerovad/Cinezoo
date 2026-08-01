@@ -10,6 +10,47 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = setupSocket;
+/** Build top-5 channels by viewer count and broadcast to everyone. */
+function broadcastViewerCounts(io, pool) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // io.sockets.adapter.rooms is a Map<roomId, Set<socketId>>
+        const rooms = io.sockets.adapter.rooms;
+        const counts = [];
+        for (const [roomId, sockets] of rooms) {
+            // skip per-socket rooms (socket.id rooms)
+            if (io.sockets.sockets.has(roomId))
+                continue;
+            counts.push({ slug: roomId, viewers: sockets.size });
+        }
+        // sort descending by viewers, take top 5
+        counts.sort((a, b) => b.viewers - a.viewers);
+        const top5 = counts.slice(0, 5);
+        if (top5.length === 0) {
+            io.emit("viewerCounts", []);
+            return;
+        }
+        // fetch display names for these slugs
+        try {
+            const slugs = top5.map((c) => c.slug);
+            const { rows } = yield pool.query(`SELECT slug, display_name, name, channel_number FROM channels WHERE slug = ANY($1)`, [slugs]);
+            const bySlug = new Map(rows.map((r) => [r.slug, r]));
+            const payload = top5.map((c) => {
+                var _a;
+                const ch = bySlug.get(c.slug);
+                return {
+                    slug: c.slug,
+                    name: (ch === null || ch === void 0 ? void 0 : ch.display_name) || (ch === null || ch === void 0 ? void 0 : ch.name) || c.slug,
+                    channelNumber: (_a = ch === null || ch === void 0 ? void 0 : ch.channel_number) !== null && _a !== void 0 ? _a : null,
+                    viewers: c.viewers,
+                };
+            });
+            io.emit("viewerCounts", payload);
+        }
+        catch (err) {
+            console.error("broadcastViewerCounts error:", err);
+        }
+    });
+}
 function setupSocket(io, pool) {
     io.on("connection", (socket) => {
         console.log(`User connected: ${socket.id}`);
@@ -50,6 +91,8 @@ function setupSocket(io, pool) {
                         : { rows: [] };
                 socket.data = { channelSlug: channelId, channelDbId, sessionId };
                 socket.emit("chatHistory", result.rows);
+                // broadcast updated viewer counts after room change
+                broadcastViewerCounts(io, pool);
             }
             catch (err) {
                 console.error("joinRoom error:", err);
@@ -86,6 +129,10 @@ function setupSocket(io, pool) {
         }));
         socket.on("disconnect", () => {
             console.log(`User disconnected: ${socket.id}`);
+            // broadcast updated viewer counts after disconnect
+            broadcastViewerCounts(io, pool);
         });
+        // send current counts to newly connected client
+        broadcastViewerCounts(io, pool);
     });
 }

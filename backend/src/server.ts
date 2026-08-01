@@ -5,6 +5,7 @@ import http from "http";
 import cors from "cors";
 import { Server } from "socket.io";
 import setupSocket from "./sockets/chatSocket"; // ✅ fixed
+import { playoutSupervisor } from "./services/onDemandPlayout";
 import authRoutes from "./routes/authRoutes";
 import chatRoutes from "./routes/chatRoutes";
 import directMessageRoutes from "./routes/directMessageRoutes";
@@ -75,6 +76,9 @@ app.use(errorHandler);
 
 // Socket Setup
 setupSocket(io, pool);
+
+// On-demand playout supervisor (Phase 5). Inert unless PLAYOUT_ONDEMAND_ENABLED.
+playoutSupervisor.configureFromEnv(pool);
 
 // Cleanup old messages every 10 minutes
 const cleanupOldMessages = async () => {
