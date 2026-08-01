@@ -4,7 +4,7 @@ import Hls from "hls.js";
 import "./VideoPlayer.scss";
 import Chatbox from "../Chatbox/Chatbox";
 import "../../styles/_variables.scss";
-import muteIcon from "../../assets/mute_icon.svg";
+import { FaVolumeMute } from "react-icons/fa";
 import intermissionDefault from "../../assets/intermission.mp4";
 import { useChatStore } from "../../store/useChatStore";
 import { useChannelDwell, useViewingHeartbeat } from "../../analytics/hooks";
@@ -503,7 +503,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
         <div className="db-originals-next-button" onClick={goToNextVideo}>
           <div className="channelnumber">{channelName}</div>
         </div>
-        {isMuted && <img src={muteIcon} alt="Muted" className="mute-icon-overlay" onClick={(e) => { e.stopPropagation(); toggleMute(); }} />}
+        {isMuted && (
+          <button
+            className="mute-icon-overlay"
+            aria-label="Unmute"
+            onClick={(e) => { e.stopPropagation(); toggleMute(); }}
+          >
+            <FaVolumeMute />
+          </button>
+        )}
       </div>
 
       <Chatbox isOpen={isChatOpen} setIsOpen={() => { }} />
