@@ -54,10 +54,11 @@ const SchedulerWidget: React.FC<Props> = ({ channelId }) => {
   const dragIndex = useRef<number | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
-  const authHeaders = useMemo<Record<string, string>>(
-    () => (token ? { Authorization: `Bearer ${token}` } : {}),
-    [token]
-  );
+  const authHeaders = useMemo<Record<string, string>>(() => {
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return headers;
+  }, [token]);
   const isOwner = !!user && !!channel && channel.owner_id === user.id;
 
   const loadChannel = useCallback(async () => {
