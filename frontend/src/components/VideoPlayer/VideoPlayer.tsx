@@ -37,7 +37,9 @@ interface VideoPlayerProps {
   isMobile?: boolean;
 }
 
-const HLS_BASE = "https://cinezoo.tv:8088";
+// Where the HLS tower lives. Defaults to production; override with
+// VITE_HLS_BASE (e.g. http://localhost:8088) to point dev at a local tower.
+const HLS_BASE = import.meta.env.VITE_HLS_BASE ?? "https://cinezoo.tv:8088";
 const INTRO_VIDEO_SRC = "/videos/CinezooIntro.mp4";
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVideoControls, isMobile = false }) => {
