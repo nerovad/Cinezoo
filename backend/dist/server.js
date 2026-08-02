@@ -20,6 +20,7 @@ const http_1 = __importDefault(require("http"));
 const cors_1 = __importDefault(require("cors"));
 const socket_io_1 = require("socket.io");
 const chatSocket_1 = __importDefault(require("./sockets/chatSocket")); // ✅ fixed
+const onDemandPlayout_1 = require("./services/onDemandPlayout");
 const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const chatRoutes_1 = __importDefault(require("./routes/chatRoutes"));
 const directMessageRoutes_1 = __importDefault(require("./routes/directMessageRoutes"));
@@ -80,6 +81,8 @@ app.use("/api/contributions", contributionRoutes_1.default);
 app.use(errorHandler_1.default);
 // Socket Setup
 (0, chatSocket_1.default)(io, pool_1.default);
+// On-demand playout supervisor (Phase 5). Inert unless PLAYOUT_ONDEMAND_ENABLED.
+onDemandPlayout_1.playoutSupervisor.configureFromEnv(pool_1.default);
 // Cleanup old messages every 10 minutes
 const cleanupOldMessages = () => __awaiter(void 0, void 0, void 0, function* () {
     try {

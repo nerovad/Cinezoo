@@ -12,10 +12,118 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.provisionPlayout = provisionPlayout;
+exports.getPlayoutConfig = getPlayoutConfig;
 exports.getPlaylist = getPlaylist;
 exports.recordAsRun = recordAsRun;
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const crypto_1 = __importDefault(require("crypto"));
 const pool_1 = __importDefault(require("../db/pool"));
 const playlist_1 = require("../services/playlist");
+const mediaStorage_1 = require("../services/mediaStorage");
+/* Where the public API and RTMP tower live, for the engine config we emit. */
+const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || "https://cinezoo.tv").replace(/\/$/, "");
+const RTMP_INGEST_URL = (process.env.RTMP_INGEST_URL || "rtmp://cinezoo.tv:1935/live").replace(/\/$/, "");
+/* Auth helper — matches the segment/media controllers. */
+function authUserIdOr401(req, res) {
+    const h = req.headers.authorization || "";
+    const token = h.startsWith("Bearer ") ? h.slice(7) : null;
+    if (!token) {
+        res.status(401).json({ error: "Access Denied" });
+        return null;
+    }
+    try {
+        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
+        return decoded.id;
+    }
+    catch (_a) {
+        res.status(401).json({ error: "Invalid Token" });
+        return null;
+    }
+}
+/** Shape the ffplayout-facing config for a provisioned channel. */
+function buildPlayoutConfig(channel) {
+    return {
+        channel_id: channel.id,
+        playout_mode: "scheduled",
+        // ffplayout `playlists` config → it fetches <base>/YYYY/MM/YYYY-MM-DD.json
+        playlist_url: `${PUBLIC_BASE_URL}/api/playout/pl/${channel.playout_token}`,
+        // ffplayout stream output target (its push lands in Cinezoo's nginx-rtmp)
+        rtmp_output: `${RTMP_INGEST_URL}/${channel.stream_key}`,
+        // ffplayout storage root — where conformed media for this channel lives
+        media_storage_root: `${mediaStorage_1.MEDIA_ROOT}/${channel.id}`,
+        // as-run task-script target + the secret it authenticates with
+        asrun_url: `${PUBLIC_BASE_URL}/api/playout/asrun`,
+        stream_key: channel.stream_key,
+    };
+}
+/**
+ * POST /api/channels/:slug/playout/provision   (owner only)
+ * Turns a channel into a scheduled playout channel: mints a playout_token if
+ * absent, sets playout_mode='scheduled', and returns the engine config an
+ * operator (or the Phase 5 supervisor) uses to configure ffplayout.
+ */
+function provisionPlayout(req, res) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const uid = authUserIdOr401(req, res);
+        if (!uid)
+            return;
+        try {
+            const { rows } = yield pool_1.default.query("SELECT id, owner_id, stream_key, playout_token FROM channels WHERE slug = $1 LIMIT 1", [req.params.slug]);
+            if (rows.length === 0) {
+                res.status(404).json({ error: "Channel not found" });
+                return;
+            }
+            const ch = rows[0];
+            if (ch.owner_id !== uid) {
+                res.status(403).json({ error: "Only the channel owner can provision playout" });
+                return;
+            }
+            const token = ch.playout_token || crypto_1.default.randomBytes(24).toString("hex");
+            const upd = yield pool_1.default.query(`UPDATE channels
+          SET playout_token = $2, playout_mode = 'scheduled'
+        WHERE id = $1
+        RETURNING id, stream_key, playout_token`, [ch.id, token]);
+            res.json({ config: buildPlayoutConfig(upd.rows[0]) });
+        }
+        catch (err) {
+            console.error("provisionPlayout error:", err);
+            res.status(500).json({ error: "Failed to provision playout" });
+        }
+    });
+}
+/**
+ * GET /api/channels/:slug/playout/config   (owner only)
+ * Read-only view of the engine config. 409 if the channel isn't provisioned yet.
+ */
+function getPlayoutConfig(req, res) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const uid = authUserIdOr401(req, res);
+        if (!uid)
+            return;
+        try {
+            const { rows } = yield pool_1.default.query("SELECT id, owner_id, stream_key, playout_token, playout_mode FROM channels WHERE slug = $1 LIMIT 1", [req.params.slug]);
+            if (rows.length === 0) {
+                res.status(404).json({ error: "Channel not found" });
+                return;
+            }
+            const ch = rows[0];
+            if (ch.owner_id !== uid) {
+                res.status(403).json({ error: "Only the channel owner can view playout config" });
+                return;
+            }
+            if (!ch.playout_token) {
+                res.status(409).json({ error: "Channel is not provisioned for playout" });
+                return;
+            }
+            res.json({ config: buildPlayoutConfig(ch), playout_mode: ch.playout_mode });
+        }
+        catch (err) {
+            console.error("getPlayoutConfig error:", err);
+            res.status(500).json({ error: "Failed to read playout config" });
+        }
+    });
+}
 /**
  * GET /api/playout/pl/:token/:year/:month/:date
  *
@@ -120,12 +228,19 @@ function recordAsRun(req, res) {
             // Best-effort attribution back to a scheduled segment. Returns null until
             // the scheduler (Phase 4) populates channel_media / channel_segments; the FK
             // is nullable, so recording an unmatched airing is fine.
+            //
+            // ffplayout reports `source` as the ABSOLUTE path it played
+            // (<media_storage_root>/<file>), while channel_media.storage_path is stored
+            // relative to that root. Match on the basename so attribution works whether
+            // the engine reports an absolute or relative source.
+            const sourceBasename = source.split("/").pop() || source;
             const seg = yield pool_1.default.query(`SELECT s.id
          FROM channel_segments s
          JOIN channel_media m ON m.id = s.media_id
-        WHERE s.channel_id = $1 AND m.storage_path = $2
+        WHERE s.channel_id = $1
+          AND (m.storage_path = $2 OR m.storage_path = $3)
         ORDER BY s.position
-        LIMIT 1`, [channelId, source]);
+        LIMIT 1`, [channelId, source, sourceBasename]);
             const segmentId = seg.rowCount ? seg.rows[0].id : null;
             yield pool_1.default.query(`INSERT INTO channel_asrun
          (channel_id, segment_id, source, title, started_at, duration_ms, is_ingest, raw)

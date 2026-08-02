@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = setupSocket;
+const onDemandPlayout_1 = require("../services/onDemandPlayout");
 /** Build top-5 channels by viewer count and broadcast to everyone. */
 function broadcastViewerCounts(io, pool) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -22,6 +23,9 @@ function broadcastViewerCounts(io, pool) {
                 continue;
             counts.push({ slug: roomId, viewers: sockets.size });
         }
+        // Feed the on-demand playout supervisor the full set of channels with viewers
+        // (not just the top 5). Inert unless on-demand playout is enabled.
+        onDemandPlayout_1.playoutSupervisor.syncViewerCounts(new Set(counts.map((c) => c.slug)));
         // sort descending by viewers, take top 5
         counts.sort((a, b) => b.viewers - a.viewers);
         const top5 = counts.slice(0, 5);
