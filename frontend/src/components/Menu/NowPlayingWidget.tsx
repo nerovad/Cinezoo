@@ -44,8 +44,9 @@ const NowPlayingWidget: React.FC<Props> = ({ channelId }) => {
 
     fetchSchedule();
 
-    // Poll every 30 seconds for updates
-    const interval = setInterval(fetchSchedule, 30000);
+    // Poll frequently so "Now Playing" tracks the airing clip closely (the
+    // as-run row updates on every clip start).
+    const interval = setInterval(fetchSchedule, 10000);
     return () => clearInterval(interval);
   }, [channelId]);
 
@@ -119,7 +120,7 @@ const NowPlayingWidget: React.FC<Props> = ({ channelId }) => {
       {(!data.now_playing && (!data.up_next || data.up_next.length === 0)) && (
         <div className="empty-schedule">
           <p>No schedule configured yet.</p>
-          <p className="help-text">Channel owners can add a schedule in channel settings.</p>
+          <p className="help-text">Channel owners can build a 24/7 loop from the Scheduler (in your profile → your channels).</p>
         </div>
       )}
     </div>

@@ -19,7 +19,7 @@ import {
   addChannelContributor,
   removeChannelContributor,
 } from "../controllers/contributionController";
-import { uploadMedia, listMedia, deleteMedia, mediaUpload } from "../controllers/mediaController";
+import { uploadMedia, listMedia, deleteMedia, renameMedia, mediaUpload } from "../controllers/mediaController";
 import {
   listSegments,
   addSegment,
@@ -121,6 +121,11 @@ router.get("/:slug/media", authenticateToken, (req: Request, res: Response, next
 // DELETE /api/channels/:slug/media/:id - owner removes a media item and its file
 router.delete("/:slug/media/:id(\\d+)", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
   deleteMedia(req, res, next);
+});
+
+// PATCH /api/channels/:slug/media/:id - owner renames a media item's display title
+router.patch("/:slug/media/:id(\\d+)", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
+  renameMedia(req, res, next);
 });
 
 // --- Scheduler (Phase 4): the ordered segment list that becomes the playlist ---

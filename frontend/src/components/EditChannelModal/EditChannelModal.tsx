@@ -140,6 +140,7 @@ const EditChannelModal: React.FC<Props> = ({ isOpen, onClose, channel, onUpdate 
 
   // Widgets
   const [selectedWidgets, setSelectedWidgets] = useState<WidgetConfig[]>([]);
+  const [channelScheduled, setChannelScheduled] = useState(false);
   const [aboutText, setAboutText] = useState("");
 
   // Event/festival
@@ -181,6 +182,7 @@ const EditChannelModal: React.FC<Props> = ({ isOpen, onClose, channel, onUpdate 
             const channelData = await channelRes.json();
             setDisplayName(channelData.display_name || "");
             setSelectedWidgets(channelData.widgets || []);
+            setChannelScheduled(channelData.playout_mode === "scheduled");
             setAboutText(channelData.about_text || "");
             setExistingSessions(channelData.sessions || []);
             setStreamKey(channelData.stream_key || "");
@@ -647,6 +649,7 @@ const EditChannelModal: React.FC<Props> = ({ isOpen, onClose, channel, onUpdate 
             addEvent={existingSessions.length > 0 || addEvent}
             selectedWidgets={selectedWidgets}
             onChange={setSelectedWidgets}
+            channelScheduled={channelScheduled}
           />
 
           {/* About widget textarea (conditional) */}

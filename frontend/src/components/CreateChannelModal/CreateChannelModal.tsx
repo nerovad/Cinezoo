@@ -79,10 +79,11 @@ const formatTimecodeInput = (value: string): string => {
   return `${limited.slice(0, len - 4)}:${limited.slice(-4, -2)}:${limited.slice(-2)}`;
 };
 
-// General widgets available for all channels
+// General widgets available at channel creation. Now Playing is intentionally
+// not here: it only makes sense once the channel has a schedule, so it's added
+// later from Edit Channel (after building a loop in the Scheduler).
 const GENERAL_WIDGETS = [
   { type: 'about', name: 'About', description: 'Channel info and description', icon: 'ℹ️' },
-  { type: 'now_playing', name: 'Now Playing / Up Next', description: 'Current and upcoming content', icon: '📺' },
   { type: 'contributions', name: 'Contributions', description: 'Let viewers pitch films to your schedule', icon: '🤝' },
 ];
 

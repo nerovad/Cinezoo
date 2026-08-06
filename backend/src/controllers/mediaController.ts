@@ -174,3 +174,42 @@ export async function deleteMedia(req: Request, res: Response, _next: NextFuncti
     res.status(500).json({ error: "Failed to delete media" });
   }
 }
+
+/**
+ * PATCH /api/channels/:slug/media/:id  (owner only)
+ * Give a media item a custom display name. This is the title the scheduler,
+ * playlist, and "Now Playing" show — so renaming a raw filename to something
+ * human ("Cold Open") flows everywhere the clip airs. `schedule_rev` is bumped
+ * so a running engine re-pulls the (retitled) playlist.
+ */
+export async function renameMedia(req: Request, res: Response, _next: NextFunction): Promise<void> {
+  const uid = authUserIdOr401(req, res);
+  if (!uid) return;
+  try {
+    const channel = await ownedChannelOr403(req.params.slug, uid, res);
+    if (!channel) return;
+    const mediaId = Number(req.params.id);
+
+    const title = typeof req.body?.title === "string" ? req.body.title.trim() : "";
+    if (!title) {
+      res.status(400).json({ error: "title is required" });
+      return;
+    }
+
+    const { rows } = await pool.query(
+      `UPDATE channel_media SET title = $3
+        WHERE id = $1 AND channel_id = $2
+        RETURNING id, title, duration_ms, conform_status, original_name`,
+      [mediaId, channel.id, title]
+    );
+    if (rows.length === 0) {
+      res.status(404).json({ error: "Media not found" });
+      return;
+    }
+    await pool.query("UPDATE channels SET schedule_rev = now() WHERE id = $1", [channel.id]);
+    res.json({ media: rows[0] });
+  } catch (err) {
+    console.error("renameMedia error:", err);
+    res.status(500).json({ error: "Failed to rename media" });
+  }
+}

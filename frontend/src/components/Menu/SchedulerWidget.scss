@@ -87,6 +87,25 @@
       .mi-title {
         color: #eee;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        display: flex; align-items: center; gap: 6px;
+
+        .mi-rename-btn {
+          flex: 0 0 auto;
+          background: transparent; border: none; color: #777;
+          cursor: pointer; font-size: 12px; padding: 0; line-height: 1;
+          opacity: 0; transition: opacity 0.12s;
+          &:hover { color: #c9a2ff; }
+        }
+      }
+      &:hover .mi-title .mi-rename-btn { opacity: 1; }
+      .mi-rename {
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(162, 89, 255, 0.5);
+        border-radius: 6px;
+        color: #fff;
+        font-size: 14px;
+        padding: 3px 6px;
+        width: 100%;
       }
       .mi-meta { font-size: 12px; color: #8a8a8a; font-variant-numeric: tabular-nums; }
 

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import pool from "../db/pool";
 
 /* Auth helper — matches the channelController/mediaController style. */
@@ -122,6 +123,19 @@ export async function addSegment(req: Request, res: Response, _next: NextFunctio
        RETURNING id, media_id, position, in_ms, out_ms, category, (out_ms - in_ms) AS playing_ms`,
       [channel.id, mediaId, pos.rows[0].next, inMs, outMs, category]
     );
+
+    // Auto-provision: building a loop turns this into a scheduled playout
+    // channel. Idempotent — the token is minted once and kept, and re-setting
+    // the mode on every add is harmless. This is what makes the on-demand
+    // supervisor pick the channel up (it requires scheduled + a token).
+    await pool.query(
+      `UPDATE channels
+          SET playout_mode = 'scheduled',
+              playout_token = COALESCE(playout_token, $2)
+        WHERE id = $1`,
+      [channel.id, crypto.randomBytes(24).toString("hex")]
+    );
+
     await bumpScheduleRev(channel.id);
     res.status(201).json({ segment: ins.rows[0] });
   } catch (err) {

@@ -10,7 +10,6 @@ import TournamentBracket from "./TournamentBracket";
 import AboutWidget from "./AboutWidget";
 import NowPlayingWidget from "./NowPlayingWidget";
 import ContributionsWidget from "./ContributionsWidget";
-import SchedulerWidget from "./SchedulerWidget";
 
 // Lava lamp blobs — each index maps to a .lava-blob--N size/position/tempo
 // variant in Menu.scss
@@ -50,7 +49,7 @@ interface UtilitiesProps {
 }
 
 /* === TYPES === */
-type ModalKind = null | "ballot" | "battle" | "bracket" | "leaderboard" | "about" | "now_playing" | "contributions" | "scheduler";
+type ModalKind = null | "ballot" | "battle" | "bracket" | "leaderboard" | "about" | "now_playing" | "contributions";
 
 type Film = {
   id: string;
@@ -547,11 +546,6 @@ const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = fal
       key: "contributions",
       name: "Contributions",
       description: "Pitch a film to this channel's schedule."
-    },
-    scheduler: {
-      key: "scheduler",
-      name: "Scheduler",
-      description: "Program this channel's 24/7 loop."
     }
   };
 
@@ -843,15 +837,6 @@ const Utilities: React.FC<UtilitiesProps> = ({ isOpen, setIsOpen, isMobile = fal
         <ContributionsWidget channelId={channelId || ""} />
       </Modal>
 
-      {/* Scheduler Widget Modal */}
-      <Modal
-        isOpen={activeModal === "scheduler"}
-        onClose={() => setActiveModal(null)}
-        title="📺 Scheduler"
-        width={720}
-      >
-        <SchedulerWidget channelId={channelId || ""} />
-      </Modal>
     </>
   );
 };

@@ -8,8 +8,7 @@ export type WidgetType =
   | 'tournament_bracket'
   | 'about'
   | 'now_playing'
-  | 'contributions'
-  | 'scheduler';
+  | 'contributions';
 
 export interface WidgetConfig {
   type: WidgetType;
@@ -46,13 +45,6 @@ const ALWAYS_AVAILABLE_WIDGETS: WidgetOption[] = [
     name: 'Contributions',
     description: 'Let viewers pitch films to your schedule',
     icon: '🤝',
-    alwaysAvailable: true
-  },
-  {
-    type: 'scheduler',
-    name: 'Scheduler',
-    description: 'Program your channel\'s 24/7 loop',
-    icon: '📺',
     alwaysAvailable: true
   }
 ];
@@ -93,9 +85,11 @@ interface Props {
   addEvent?: boolean;
   selectedWidgets: WidgetConfig[];
   onChange: (widgets: WidgetConfig[]) => void;
+  /** Now Playing is only offered once the channel has a schedule (see Scheduler). */
+  channelScheduled?: boolean;
 }
 
-const WidgetSelector: React.FC<Props> = ({ eventType, addEvent = false, selectedWidgets, onChange }) => {
+const WidgetSelector: React.FC<Props> = ({ eventType, addEvent = false, selectedWidgets, onChange, channelScheduled = false }) => {
   const toggleWidget = (widgetType: WidgetType) => {
     const exists = selectedWidgets.find(w => w.type === widgetType);
 
@@ -141,25 +135,49 @@ const WidgetSelector: React.FC<Props> = ({ eventType, addEvent = false, selected
       <div className="widget-section">
         <h5 className="widget-section-title">General Widgets</h5>
         <div className="widget-grid">
-          {ALWAYS_AVAILABLE_WIDGETS.map(widget => (
-            <label
-              key={widget.type}
-              className={`widget-option ${isSelected(widget.type) ? 'selected' : ''}`}
-            >
-              <input
-                type="checkbox"
-                checked={isSelected(widget.type)}
-                onChange={() => toggleWidget(widget.type)}
-              />
-              <div className="widget-card">
-                <span className="widget-icon">{widget.icon}</span>
-                <div className="widget-info">
-                  <strong>{widget.name}</strong>
-                  <p>{widget.description}</p>
+          {ALWAYS_AVAILABLE_WIDGETS.map(widget => {
+            // Now Playing only makes sense on a scheduled channel — lock it until
+            // the owner builds a loop in the Scheduler.
+            const locked = widget.type === 'now_playing' && !channelScheduled;
+            if (locked) {
+              return (
+                <div
+                  key={widget.type}
+                  className="widget-option disabled"
+                  title="Add clips in the Scheduler to enable this widget"
+                >
+                  <input type="checkbox" checked={false} disabled onChange={() => {}} />
+                  <div className="widget-card">
+                    <span className="widget-icon">{widget.icon}</span>
+                    <div className="widget-info">
+                      <strong>{widget.name}</strong>
+                      <span className="badge locked">Needs a schedule</span>
+                      <p>{widget.description}</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </label>
-          ))}
+              );
+            }
+            return (
+              <label
+                key={widget.type}
+                className={`widget-option ${isSelected(widget.type) ? 'selected' : ''}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected(widget.type)}
+                  onChange={() => toggleWidget(widget.type)}
+                />
+                <div className="widget-card">
+                  <span className="widget-icon">{widget.icon}</span>
+                  <div className="widget-info">
+                    <strong>{widget.name}</strong>
+                    <p>{widget.description}</p>
+                  </div>
+                </div>
+              </label>
+            );
+          })}
         </div>
       </div>
 

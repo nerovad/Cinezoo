@@ -50,6 +50,8 @@ const SchedulerWidget: React.FC<Props> = ({ channelId }) => {
   const [uploading, setUploading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+  const [renamingId, setRenamingId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
   const dragIndex = useRef<number | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -131,6 +133,30 @@ const SchedulerWidget: React.FC<Props> = ({ channelId }) => {
     }
   };
 
+  const beginRename = (m: MediaItem) => {
+    setRenamingId(m.id);
+    setRenameValue(m.title);
+  };
+
+  const commitRename = async (m: MediaItem) => {
+    const title = renameValue.trim();
+    setRenamingId(null);
+    if (!title || title === m.title) return;
+    // Optimistic; reload the (retitled, schedule-rev-bumped) media + segments.
+    setMedia((prev) => prev.map((x) => (x.id === m.id ? { ...x, title } : x)));
+    const res = await fetch(`/api/channels/${encodeURIComponent(channelId)}/media/${m.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({ title }),
+    });
+    if (res.ok) {
+      await Promise.all([loadMedia(), loadSegments()]);
+    } else {
+      setNotice('Rename failed.');
+      loadMedia();
+    }
+  };
+
   const addToSchedule = async (m: MediaItem) => {
     const res = await fetch(`/api/channels/${encodeURIComponent(channelId)}/segments`, {
       method: 'POST',
@@ -200,7 +226,24 @@ const SchedulerWidget: React.FC<Props> = ({ channelId }) => {
             {media.map((m) => (
               <li key={m.id} className={`media-item status-${m.conform_status}`}>
                 <div className="mi-main">
-                  <span className="mi-title">{m.title}</span>
+                  {renamingId === m.id ? (
+                    <input
+                      className="mi-rename"
+                      autoFocus
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={() => commitRename(m)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') commitRename(m);
+                        if (e.key === 'Escape') setRenamingId(null);
+                      }}
+                    />
+                  ) : (
+                    <span className="mi-title" title="Click ✎ to rename">
+                      {m.title}
+                      <button className="mi-rename-btn" title="Rename" onClick={() => beginRename(m)}>✎</button>
+                    </span>
+                  )}
                   <span className="mi-meta">
                     {m.conform_status === 'ready'
                       ? fmt(m.duration_ms)

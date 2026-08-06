@@ -4,6 +4,7 @@ import AvatarPicker from "./AvatarPicker";
 import CreateChannelModal from "../CreateChannelModal/CreateChannelModal";
 import Messages from "./Messages";
 import EditChannelModal from "../EditChannelModal/EditChannelModal";
+import SchedulerModal from "../SchedulerModal/SchedulerModal";
 import EventModal from "../EventModal/EventModal";
 import TournamentConsole from "./TournamentConsole";
 import AnalyticsModal from "../AnalyticsModal/AnalyticsModal";
@@ -105,6 +106,7 @@ const Profile: React.FC = () => {
   const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
+  const [schedulerChannel, setSchedulerChannel] = useState<Channel | null>(null);
   const [deletingChannelId, setDeletingChannelId] = useState<string | null>(null);
 
   // Event modal state
@@ -282,6 +284,10 @@ const Profile: React.FC = () => {
 
   const handleChannelCreated = (newChannel: any) => {
     setChannels(prev => [...prev, newChannel]);
+    // For convenience, drop the owner straight into the Scheduler for the new
+    // channel so they can upload and build a loop right away.
+    setIsCreateChannelOpen(false);
+    setSchedulerChannel(newChannel);
   };
 
   const handleChannelUpdate = (updatedChannel: any) => {
@@ -524,6 +530,12 @@ const Profile: React.FC = () => {
                         </button>
                         <button
                           className="btn"
+                          onClick={() => setSchedulerChannel(ch)}
+                        >
+                          Scheduler
+                        </button>
+                        <button
+                          className="btn"
                           onClick={() => setAddingEventToChannel(ch)}
                         >
                           Add Event
@@ -652,6 +664,13 @@ const Profile: React.FC = () => {
         onClose={() => setEditingChannel(null)}
         channel={editingChannel}
         onUpdate={handleChannelUpdate}
+      />
+
+      <SchedulerModal
+        isOpen={!!schedulerChannel}
+        onClose={() => setSchedulerChannel(null)}
+        channelSlug={schedulerChannel?.slug || String(schedulerChannel?.id || "")}
+        channelName={schedulerChannel?.display_name || schedulerChannel?.name}
       />
 
       <AvatarPicker
