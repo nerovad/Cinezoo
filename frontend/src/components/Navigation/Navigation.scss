@@ -1,4 +1,5 @@
 @use "../../styles/_variables.scss" as *;
+@use "../../styles/_spacecadet.scss" as *;
 
 .search-navbar {
   position: fixed;
@@ -7,7 +8,9 @@
   padding: 0.5rem 1.5rem;
   height: 50px;
   width: 100%;
-  background-color: $background-color-primary;
+  // Same panel black as the news ticker, so the bar at the top of the
+  // screen and the readout at the bottom frame the video as one unit.
+  background-color: $sc-panel-black;
   z-index: 100000;
   font-family: $primary-font-family;
 
@@ -216,13 +219,9 @@
       transform: scale(0.95);
     }
 
-    &--up img {
-      transform: rotate(180deg);
-    }
-
     img {
       height: 28px;
-      width: auto;
+      width: 28px;
       display: block;
     }
   }
@@ -253,22 +252,9 @@
 
     img {
       height: 28px;
-      width: auto;
+      width: 28px;
       display: block;
     }
-
-    svg {
-      height: 22px;
-      width: 22px;
-      color: #af63ff;
-      display: block;
-    }
-  }
-
-  // Volume glyph reads small next to the 28px icon art, so size it to match.
-  .mute-button svg {
-    height: 28px;
-    width: 28px;
   }
 
   // Volume slider group — expands on hover
@@ -658,7 +644,7 @@
 
       img {
         height: 18px;
-        width: auto;
+        width: 18px;
       }
     }
 

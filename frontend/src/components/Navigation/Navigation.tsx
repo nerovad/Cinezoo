@@ -1,12 +1,15 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaUserCircle, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
-import { FaShuffle } from "react-icons/fa6";
+import { FaUserCircle } from "react-icons/fa";
 import Logo from "../../assets/cinezoo_logo_neon_7.svg";
 import "./Navigation.scss";
-import ChannelArrow from "../../assets/down_arrow_02_13.svg"
-import TvGuide from "../../assets/tv_guide_icon_02_13.svg"
-import Fullscreen from "../../assets/fullscreen_icon.svg"
+import ArrowUp from "../../assets/nav/nav_arrow_up.svg"
+import ArrowDown from "../../assets/nav/nav_arrow_down.svg"
+import TvGuide from "../../assets/nav/nav_tv_guide.svg"
+import MuteIcon from "../../assets/nav/nav_mute.svg"
+import VolumeIcon from "../../assets/nav/nav_volume.svg"
+import Shuffle from "../../assets/nav/nav_shuffle.svg"
+import Fullscreen from "../../assets/nav/nav_fullscreen.svg"
 import { useChatStore } from "../../store/useChatStore";
 import { useAuth } from "../../store/AuthContext";
 
@@ -323,10 +326,10 @@ const SearchNavBar: React.FC<NavBarProps> = ({
   const channelButtons = (
     <div className="control-pill__group control-pill__group--channel">
       <button className="channel-button" onClick={goToPreviousVideo}>
-        <img src={ChannelArrow} alt="Previous Channel" className="channel-arrow-icon" />
+        <img src={ArrowDown} alt="Previous Channel" className="channel-arrow-icon" />
       </button>
       <button className="channel-button channel-button--up" onClick={goToNextVideo}>
-        <img src={ChannelArrow} alt="Next Channel" className="channel-arrow-icon" />
+        <img src={ArrowUp} alt="Next Channel" className="channel-arrow-icon" />
       </button>
     </div>
   );
@@ -387,7 +390,10 @@ const SearchNavBar: React.FC<NavBarProps> = ({
                 onClick={handleMuteClick}
                 aria-label={isMuted || volume === 0 ? "Unmute" : "Mute"}
               >
-                {isMuted || volume === 0 ? <FaVolumeMute /> : <FaVolumeUp />}
+                <img
+                  src={isMuted || volume === 0 ? MuteIcon : VolumeIcon}
+                  alt=""
+                />
               </button>
               <div className="volume-slider-container">
                 <input
@@ -475,7 +481,7 @@ const SearchNavBar: React.FC<NavBarProps> = ({
             }}
             aria-label="Shuffle to random channel"
           >
-            <FaShuffle />
+            <img src={Shuffle} alt="" />
           </button>
 
           <button className="fullscreen-button" onClick={toggleFullscreen}>

@@ -1,8 +1,8 @@
 // ── Space Cadet material kit ─────────────────────────────────────────
-// Surfaces for the 3D Pinball Space Cadet treatment. Only the news
-// ticker uses these today — it is the one piece of that experiment that
-// stuck. Keeping them here rather than inline in NewsTicker.scss so the
-// LED look is reusable if anything else ever wants a readout.
+// Surfaces for the 3D Pinball Space Cadet treatment — the one piece of
+// that experiment that stuck. The news ticker uses the full LED kit; the
+// nav bar borrows $sc-panel-black so the top and bottom edges of the
+// screen read as the same material.
 //
 // This is a *material* layer, not a colour scheme. The app's palette in
 // _variables.scss still supplies the accent hues — these mixins only

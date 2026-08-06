@@ -1,5 +1,6 @@
 @use "sass:color";
 @use "../../styles/_variables.scss" as *;
+@use "../../styles/_spacecadet.scss" as *;
 
 // Lava lamp wax shades derived from $primary-color: #a259ff
 // These are opaque on purpose — the goo filter needs solid alpha to merge
@@ -15,7 +16,8 @@ $lava-shade: color.adjust($primary-color, $lightness: -24%, $saturation: -10%); 
   top: 50px;
   left: 0;
   height: calc(100vh - 50px - var(--ticker-height, 50px));
-  background-color: $background-color-primary;
+  // Panel black, shared with the nav bar and news ticker.
+  background-color: $sc-panel-black;
   transition: width 0.3s ease-in-out, height 0.3s ease-in-out, transform 0.3s ease-in-out;
   overflow-y: hidden;
   overflow-x: hidden;
