@@ -857,11 +857,23 @@ export async function getChannelSchedule(req: Request, res: Response): Promise<v
     // grace), which would mean playout has stopped. When present this is
     // authoritative; it beats any timecode-derived guess below. For legacy and
     // live channels there are no as-run rows and this stays null.
+    // `current_title` resolves the display name from the CURRENT media row, not
+    // the title captured when the clip aired — so renaming a clip in the
+    // Scheduler shows up in "Now Playing" immediately (the engine keeps the old
+    // title in its pushed playlist until re-pushed, but the DB is the source of
+    // truth for what we show). Prefer the segment's media (a.segment_id); fall
+    // back to matching the source's basename against storage_path.
     const asRun = await client.query(
-      `SELECT id, segment_id, source, title, started_at, duration_ms, is_ingest
-         FROM channel_asrun
-        WHERE channel_id = $1
-        ORDER BY started_at DESC
+      `SELECT a.id, a.segment_id, a.source, a.title, a.started_at, a.duration_ms, a.is_ingest,
+              COALESCE(sm.title, bm.title) AS current_title
+         FROM channel_asrun a
+         LEFT JOIN channel_segments s ON s.id = a.segment_id
+         LEFT JOIN channel_media sm ON sm.id = s.media_id
+         LEFT JOIN channel_media bm
+                ON bm.channel_id = a.channel_id
+               AND bm.storage_path = regexp_replace(a.source, '^.*/', '')
+        WHERE a.channel_id = $1
+        ORDER BY a.started_at DESC
         LIMIT 1`,
       [channelId]
     );
@@ -869,14 +881,15 @@ export async function getChannelSchedule(req: Request, res: Response): Promise<v
     let asRunNowPlaying: any = null;
     if (asRun.rows.length > 0) {
       const r = asRun.rows[0];
+      const displayTitle = r.current_title || r.title;
       const started = new Date(r.started_at).getTime();
       const durMs = r.duration_ms ?? 3600000; // assume 1h if the engine reported none
       if (now.getTime() < started + durMs + 60000 /* staleness grace */) {
         asRunNowPlaying = {
           id: r.segment_id ?? r.id,
           film_id: null,
-          film_title: r.title,
-          title: r.title,
+          film_title: displayTitle,
+          title: displayTitle,
           scheduled_at: r.started_at, // when it actually started airing
           duration_seconds: r.duration_ms != null ? Math.round(r.duration_ms / 1000) : null,
           status: 'airing',
