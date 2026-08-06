@@ -66,6 +66,36 @@ class OnDemandPlayout {
     }
   }
 
+  /**
+   * A viewer just tuned to this channel — start its engine now.
+   *
+   * The socket layer already starts channels via viewer counts, but that path
+   * waits on the websocket handshake and the room join, so a cold channel's
+   * first frames arrive seconds later than they need to. The player calls this
+   * over plain HTTP the instant it knows the slug.
+   *
+   * Safe to call for anything: non-scheduled and unprovisioned channels fall out
+   * at the eligibility check. It only ever *starts* — the socket viewer counts
+   * remain the sole authority on teardown, so a caller that never actually
+   * joins the room gets cleaned up by the next tick's grace timer.
+   */
+  async tuneIn(slug: string): Promise<void> {
+    if (!this.enabled || !this.pool || !slug) return;
+    const st = this.status.get(slug);
+    if (st === "running") return; // already up
+    if (st === "stopping") {
+      // Caught it inside the grace window — keep the engine we already have.
+      const t = this.teardownTimers.get(slug);
+      if (t) { clearTimeout(t); this.teardownTimers.delete(slug); }
+      this.status.set(slug, "running");
+      return;
+    }
+    // Optimistic, same as the viewer-count path: blocks a double start while
+    // the async eligibility check runs, and is cleared if it isn't eligible.
+    this.status.set(slug, "running");
+    await this.startIfEligible(slug);
+  }
+
   private async startIfEligible(slug: string): Promise<void> {
     const channel = await this.resolveEligible(slug);
     if (!channel) {

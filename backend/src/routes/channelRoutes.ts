@@ -27,7 +27,7 @@ import {
   reorderSegments,
   deleteSegment,
 } from "../controllers/segmentController";
-import { provisionPlayout, getPlayoutConfig } from "../controllers/playoutController";
+import { provisionPlayout, getPlayoutConfig, tuneIn } from "../controllers/playoutController";
 import { authenticateToken, requireGroup, AuthRequest } from "../middleware/authMiddleware";
 
 const router = express.Router();
@@ -160,6 +160,11 @@ router.delete("/:slug/segments/:id(\\d+)", authenticateToken, (req: Request, res
 // POST /api/channels/:slug/playout/provision - mint token, set scheduled, emit engine config
 router.post("/:slug/playout/provision", authenticateToken, (req: Request, res: Response, next: NextFunction) => {
   provisionPlayout(req, res).catch(next);
+});
+
+// POST /api/channels/:slug/playout/tune - a viewer tuned in; start the engine now (public)
+router.post("/:slug/playout/tune", (req: Request, res: Response, next: NextFunction) => {
+  tuneIn(req, res).catch(next);
 });
 
 // GET /api/channels/:slug/playout/config - read the engine config (owner)

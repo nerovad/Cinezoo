@@ -58,6 +58,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
   // changes when the user hits a mute control.
   const mutedRef = useRef(true);
   const goToNextVideoRef = useRef<(() => void) | null>(null);
+  // Manifest watch. A scheduled channel's engine only starts once we're counted
+  // as a viewer, so its HLS manifest shows up seconds AFTER we tune in — the
+  // first check always misses. These let the intermission be a waiting room
+  // instead of a dead end. loadTokenRef invalidates a watch when the channel
+  // changes underneath it.
+  const manifestWatchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadTokenRef = useRef(0);
+  const loadVideoRef = useRef<((src: string) => void) | null>(null);
   const intermissionVideoRef = useRef<HTMLVideoElement | null>(null);
   const intermissionImgRef = useRef<HTMLImageElement | null>(null);
   const ambientCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -112,6 +120,47 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     retryRef.current = 0;
   };
 
+  const stopManifestWatch = () => {
+    if (manifestWatchRef.current) {
+      clearTimeout(manifestWatchRef.current);
+      manifestWatchRef.current = null;
+    }
+  };
+
+  const manifestExists = async (src: string) => {
+    try {
+      const res = await fetch(src, { method: "HEAD", cache: "no-store" });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  };
+
+  // Keep checking the manifest behind the intermission and cut to the stream the
+  // moment it exists. Tight cadence while an on-demand engine is spinning up,
+  // relaxed after that so a channel that's genuinely dark costs almost nothing.
+  const watchForManifest = (src: string, token: number, attempt = 0) => {
+    stopManifestWatch();
+    const delay = attempt < 10 ? 2000 : 10000;
+    manifestWatchRef.current = setTimeout(async () => {
+      manifestWatchRef.current = null;
+      if (token !== loadTokenRef.current) return;
+      // A hidden tab isn't watching anything — skip the round trip, and don't
+      // count it against the cadence so coming back still gets a fast pickup.
+      if (document.hidden) {
+        watchForManifest(src, token, attempt);
+        return;
+      }
+      if (!(await manifestExists(src))) {
+        if (token === loadTokenRef.current) watchForManifest(src, token, attempt + 1);
+        return;
+      }
+      if (token !== loadTokenRef.current) return;
+      console.log("[VideoPlayer] Manifest is up, leaving intermission:", src);
+      loadVideoRef.current?.(src);
+    }, delay);
+  };
+
   const attachEndedForMp4 = () => {
     const v = videoRef.current;
     if (!v) return;
@@ -127,6 +176,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     endedListenerRef.current = () => v.removeEventListener("ended", onEnded);
   };
 
+  // Tell the backend a viewer landed here, so a scheduled channel's engine
+  // starts on this HTTP call rather than waiting for the chat socket to finish
+  // its handshake and join the room. Fire-and-forget: the manifest watch is
+  // what actually picks the stream up, this only shortens the wait. Harmless
+  // for channels that aren't scheduled — the supervisor ignores those.
+  const tuneIn = useCallback((slug: string) => {
+    if (!slug) return;
+    fetch(`/api/channels/${encodeURIComponent(slug)}/playout/tune`, { method: "POST" })
+      .catch(() => { });
+  }, []);
+
   const loadVideo = useCallback(async (src: string) => {
     console.log("[loadVideo] Loading:", src);
     const v = videoRef.current;
@@ -134,6 +194,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
       console.log("[loadVideo] No video element!");
       return;
     }
+
+    // Any in-flight manifest watch belongs to the previous load — retire it.
+    const token = ++loadTokenRef.current;
+    stopManifestWatch();
 
     cleanupHls();
     setShowIntermission(false);
@@ -156,16 +220,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
 
     // Pre-check if the HLS manifest exists before creating an HLS instance
     if (src.includes(".m3u8")) {
-      try {
-        const res = await fetch(src, { method: "HEAD" });
-        if (!res.ok) {
-          console.log("[loadVideo] Stream offline (HTTP", res.status, "), showing intermission");
-          setShowIntermission(true);
-          return;
-        }
-      } catch {
-        console.log("[loadVideo] Stream unreachable, showing intermission");
+      const up = await manifestExists(src);
+      if (token !== loadTokenRef.current) return; // channel changed mid-check
+      if (!up) {
+        console.log("[loadVideo] Stream not up yet, showing intermission and watching:", src);
         setShowIntermission(true);
+        watchForManifest(src, token);
         return;
       }
     }
@@ -203,17 +263,20 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
             retryRef.current += 1;
             (hls as any).startLoad?.();
           } else {
-            console.log("[VideoPlayer] Stream offline after retries, showing intermission");
+            console.log("[VideoPlayer] Stream dropped after retries, showing intermission and watching");
             setShowIntermission(true);
+            watchForManifest(src, token);
           }
         } else if (type === "mediaError") {
           try {
             (hls as any).recoverMediaError?.();
           } catch {
             setShowIntermission(true);
+            watchForManifest(src, token);
           }
         } else {
           setShowIntermission(true);
+          watchForManifest(src, token);
         }
       });
 
@@ -262,6 +325,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
   useEffect(() => {
     goToNextVideoRef.current = goToNextVideo;
   }, [goToNextVideo]);
+
+  // Lets the manifest watch re-enter loadVideo without depending on it.
+  useEffect(() => {
+    loadVideoRef.current = loadVideo;
+  }, [loadVideo]);
 
   const toggleMute = () => {
     const v = videoRef.current;
@@ -487,6 +555,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
       setCurrentIndex(idx);
       const link = videoLinks[idx];
 
+      // Only tower channels have an engine behind them; the colour bars and the
+      // intro are local files.
+      if (link.src.includes(".m3u8")) tuneIn(link.channel);
       loadVideo(link.src);
       setChannelId(link.channel);
       // The intro slot is meant to feel like part of the boot sequence,
@@ -500,7 +571,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     } else {
       console.log("[VideoPlayer] Skipping load:", { idx, currentIndex, initialLoad: initialLoadRef.current });
     }
-  }, [channelSlug, videoLinks, isVideoReady, loadVideo, setChannelId]);
+  }, [channelSlug, videoLinks, isVideoReady, loadVideo, tuneIn, setChannelId]);
 
   // ✅ Provide controls to NavBar
   useEffect(() => {
@@ -539,7 +610,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     };
   }, [goToNextVideo, goToPreviousVideo]);
 
-  useEffect(() => () => cleanupHls(), []);
+  useEffect(() => () => { stopManifestWatch(); cleanupHls(); }, []);
 
   // Resolve the intermission source: custom per-channel or system default
   const currentLink = videoLinks[currentIndex];

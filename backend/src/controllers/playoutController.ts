@@ -4,6 +4,7 @@ import crypto from "crypto";
 import pool from "../db/pool";
 import { buildDayPlaylist, SegmentRow } from "../services/playlist";
 import { MEDIA_ROOT } from "../services/mediaStorage";
+import { playoutSupervisor } from "../services/onDemandPlayout";
 
 /* Where the public API and RTMP tower live, for the engine config we emit. */
 const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || "https://cinezoo.tv").replace(/\/$/, "");
@@ -96,6 +97,27 @@ export async function getPlayoutConfig(req: Request, res: Response): Promise<voi
     console.error("getPlayoutConfig error:", err);
     res.status(500).json({ error: "Failed to read playout config" });
   }
+}
+
+/**
+ * POST /api/channels/:slug/playout/tune   (public — viewers are anonymous)
+ *
+ * "A viewer just tuned in." Nudges the on-demand supervisor to start this
+ * channel's engine right away instead of waiting for the chat socket to connect
+ * and join the room, which is what otherwise decides a channel has viewers.
+ *
+ * Always 202, whatever the slug: the supervisor ignores channels that aren't
+ * provisioned scheduled channels with ready segments, and the answer must not
+ * become a probe for which channels those are. Starting is all this can do —
+ * teardown still follows real viewer counts, so an engine started by a caller
+ * who never joins the room is stopped again after the grace period.
+ */
+export async function tuneIn(req: Request, res: Response): Promise<void> {
+  const slug = String(req.params.slug || "").trim();
+  // Don't make the viewer wait on ffplayout's control API — they're already
+  // watching the intermission and their player is polling for the manifest.
+  void playoutSupervisor.tuneIn(slug);
+  res.status(202).json({ ok: true });
 }
 
 /**
