@@ -59,6 +59,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
   const mutedRef = useRef(true);
   const goToNextVideoRef = useRef<(() => void) | null>(null);
   const intermissionVideoRef = useRef<HTMLVideoElement | null>(null);
+  const intermissionImgRef = useRef<HTMLImageElement | null>(null);
+  const ambientCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const { setChannelId } = useChatStore();
 
@@ -73,6 +75,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
   const [isMuted, setIsMuted] = useState(true);
   const [showIntermission, setShowIntermission] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
+  // Aspect of whatever is on screen right now. Drives the size of .video-stage,
+  // so the stage always matches the picture and nothing is ever cropped.
+  const [mediaAspect, setMediaAspect] = useState(16 / 9);
   const [videoLinks, setVideoLinks] = useState<VideoLink[]>([
     { src: "/videos/Color_Bars_DB_Web.mp4", channel: "channel-0", channelNumber: 0, isLive: false },
     { src: INTRO_VIDEO_SRC, channel: "channel-1", channelNumber: 1, isLive: false },
@@ -274,6 +279,69 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     else document.exitFullscreen().catch(() => { });
   };
 
+  // Whichever element is actually painting right now. Both the aspect lock and
+  // the ambient backdrop read from it, so they never disagree about what's on
+  // screen during an intermission.
+  const getActiveMedia = useCallback((): HTMLVideoElement | HTMLImageElement | null => {
+    if (showIntermission) return intermissionVideoRef.current ?? intermissionImgRef.current;
+    return videoRef.current;
+  }, [showIntermission]);
+
+  const measureAspect = useCallback(() => {
+    const el = getActiveMedia();
+    if (!el) return;
+    const w = el instanceof HTMLVideoElement ? el.videoWidth : el.naturalWidth;
+    const h = el instanceof HTMLVideoElement ? el.videoHeight : el.naturalHeight;
+    if (w > 0 && h > 0) setMediaAspect(w / h);
+  }, [getActiveMedia]);
+
+  // The main element's dimensions arrive at loadedmetadata and can change again
+  // mid-stream ("resize") when HLS switches rendition.
+  useEffect(() => {
+    if (!isVideoReady) return;
+    const v = videoRef.current;
+    if (!v) return;
+    v.addEventListener("loadedmetadata", measureAspect);
+    v.addEventListener("resize", measureAspect);
+    measureAspect();
+    return () => {
+      v.removeEventListener("loadedmetadata", measureAspect);
+      v.removeEventListener("resize", measureAspect);
+    };
+  }, [isVideoReady, measureAspect]);
+
+  // Re-measure when the intermission comes or goes — the active element
+  // changes without either media element firing an event.
+  useEffect(() => { measureAspect(); }, [showIntermission, measureAspect]);
+
+  // Ambient backdrop: the letterbox area is filled with a heavily blurred copy
+  // of the picture instead of flat black. Drawn into a 32x18 canvas at ~5fps
+  // and blown up by CSS — the source is already destroyed by the blur, so a
+  // thumbnail costs nothing and there is no second decode of the stream.
+  useEffect(() => {
+    const canvas = ambientCanvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+
+    const FRAME_MS = 1000 / 5;
+    let raf = 0;
+    let last = 0;
+
+    const tick = (t: number) => {
+      raf = requestAnimationFrame(tick);
+      if (t - last < FRAME_MS || document.hidden) return;
+      last = t;
+      const el = getActiveMedia();
+      if (!el) return;
+      if (el instanceof HTMLVideoElement && (el.readyState < 2 || el.videoWidth === 0)) return;
+      // Cross-origin frames taint the canvas but still draw; we never read back.
+      try { ctx.drawImage(el, 0, 0, canvas.width, canvas.height); } catch { }
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [getActiveMedia]);
+
   // Set video ready state when component mounts
   useEffect(() => {
     const checkVideo = () => {
@@ -330,7 +398,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
     const main = videoRef.current;
     el.muted = main ? main.muted : mutedRef.current;
     if (main) el.volume = main.volume;
-  }, []);
+    el.addEventListener("loadedmetadata", measureAspect);
+    measureAspect();
+  }, [measureAspect]);
+
+  const attachIntermissionImg = useCallback((el: HTMLImageElement | null) => {
+    intermissionImgRef.current = el;
+    if (!el) return;
+    el.addEventListener("load", measureAspect);
+    measureAspect();
+  }, [measureAspect]);
 
 
   // ✅ Fetch channels
@@ -472,48 +549,58 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ isMenuOpen, isChatOpen, setVi
   return (
     <div className={`video-container-dboriginals ${getClassNames()}`}>
       <div className="tv-container" ref={containerRef}>
-        <video
-          className="myvideo"
-          ref={videoRef}
-          muted
-          autoPlay
-          preload="metadata"
-          playsInline
-          controls={false}
-          style={showIntermission ? { display: "none" } : undefined}
-        />
-        {showIntermission && (
-          <div className="intermission-screen">
-            {isIntermissionVideo ? (
-              <video
-                ref={attachIntermissionVideo}
-                src={intermissionSrc}
-                className="intermission-video"
-                autoPlay
-                loop
-                playsInline
-              />
-            ) : (
-              <img
-                src={intermissionSrc}
-                className="intermission-video"
-                alt="Intermission"
-              />
-            )}
-          </div>
-        )}
-        <div className="db-originals-next-button" onClick={goToNextVideo}>
+        <canvas className="video-ambient" ref={ambientCanvasRef} width={32} height={18} aria-hidden="true" />
+
+        <div className="db-originals-next-button" onClick={goToNextVideo} />
+
+        {/* Locked to the picture's own aspect, so the video is never cropped and
+            the overlays below stay pinned to the image rather than to the box. */}
+        <div
+          className="video-stage"
+          style={{ "--media-aspect": mediaAspect } as React.CSSProperties}
+        >
+          <video
+            className="myvideo"
+            ref={videoRef}
+            muted
+            autoPlay
+            preload="metadata"
+            playsInline
+            controls={false}
+            style={showIntermission ? { display: "none" } : undefined}
+          />
+          {showIntermission && (
+            <div className="intermission-screen">
+              {isIntermissionVideo ? (
+                <video
+                  ref={attachIntermissionVideo}
+                  src={intermissionSrc}
+                  className="intermission-video"
+                  autoPlay
+                  loop
+                  playsInline
+                />
+              ) : (
+                <img
+                  ref={attachIntermissionImg}
+                  src={intermissionSrc}
+                  className="intermission-video"
+                  alt="Intermission"
+                />
+              )}
+            </div>
+          )}
           <div className="channelnumber">{channelName}</div>
+          {isMuted && (
+            <button
+              className="mute-icon-overlay"
+              aria-label="Unmute"
+              onClick={(e) => { e.stopPropagation(); toggleMute(); }}
+            >
+              <FaVolumeMute />
+            </button>
+          )}
         </div>
-        {isMuted && (
-          <button
-            className="mute-icon-overlay"
-            aria-label="Unmute"
-            onClick={(e) => { e.stopPropagation(); toggleMute(); }}
-          >
-            <FaVolumeMute />
-          </button>
-        )}
       </div>
 
       <Chatbox isOpen={isChatOpen} setIsOpen={() => { }} />

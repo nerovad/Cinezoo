@@ -24,6 +24,9 @@
   align-items: center;
   background-color: black;
   overflow: hidden;
+  // Makes cqw/cqh below resolve against this box. Its own size is already
+  // fixed by the parent, so opting out of content-based sizing costs nothing.
+  container-type: size;
 
   &:fullscreen {
     width: 100vw;
@@ -31,10 +34,39 @@
   }
 }
 
+// The picture, sized to the media's own aspect and centred. Whichever axis is
+// spare becomes letterbox — filled by .video-ambient, never by dead black.
+// cqw/cqh are used instead of `aspect-ratio` because a ratio box clamped by
+// max-width/max-height loses its ratio on the clamped axis; this is exact.
+.video-stage {
+  position: relative;
+  z-index: 2;
+  width: min(100cqw, 100cqh * var(--media-aspect, 1.7778));
+  height: min(100cqh, 100cqw / var(--media-aspect, 1.7778));
+  // Clicks fall through to .db-originals-next-button underneath, so tapping
+  // the picture still changes channel. Interactive children opt back in.
+  pointer-events: none;
+}
+
+// Blurred, over-scaled copy of the current frame, painted from a 32x18 canvas.
+.video-ambient {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  // Over-scaled so the blur's soft edge never exposes the box behind it.
+  transform: scale(1.2);
+  filter: blur(48px) saturate(1.6) brightness(0.5);
+  pointer-events: none;
+}
+
 .myvideo {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  // The stage already matches the source aspect; contain keeps a stale or
+  // still-unmeasured aspect from cropping rather than just mis-sizing.
+  object-fit: contain;
   position: absolute;
   top: 0;
   left: 0;
@@ -46,7 +78,7 @@
   height: 100%;
   top: 0;
   left: 0;
-  z-index: 2;
+  z-index: 1;
   background: transparent;
   cursor: pointer;
 }
@@ -80,6 +112,8 @@
   justify-content: center;
   cursor: pointer;
   z-index: 5;
+  // .video-stage disables pointer events wholesale; this control needs them.
+  pointer-events: auto;
   transition: opacity 0.3s ease-in-out, transform 0.2s ease-in-out,
     filter 0.2s ease-in-out;
 
@@ -116,7 +150,7 @@
 .intermission-video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 /* Mobile styles - remove margins since sidebars overlay */
@@ -143,32 +177,15 @@
   }
 }
 
-/* Portrait: scale video down to fit, allowing black bars */
+/* Portrait. The stage handles the fit; no object-fit override needed. */
 @media (max-width: 768px) and (orientation: portrait) {
   .video-container-dboriginals {
     top: 0;
     height: 100%;
   }
-
-  .myvideo {
-    object-fit: contain !important;
-  }
-
-  .intermission-video {
-    object-fit: contain;
-  }
 }
 
-/* Landscape: fill the screen */
 @media (orientation: landscape) and (max-height: 500px) {
-  .myvideo {
-    object-fit: cover !important;
-  }
-
-  .intermission-video {
-    object-fit: cover;
-  }
-
   .mute-icon-overlay {
     width: 50px;
   }
