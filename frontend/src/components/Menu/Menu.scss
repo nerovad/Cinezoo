@@ -26,7 +26,7 @@ $lava-shade: color.adjust($primary-color, $lightness: -24%, $saturation: -10%); 
   min-width: 0;
 
   &.open {
-    width: 250px;
+    width: $sidebar-width;
   }
 
   &:not(.open) {
@@ -99,7 +99,7 @@ $lava-shade: color.adjust($primary-color, $lightness: -24%, $saturation: -10%); 
   }
 
   &.open {
-    left: 220px;
+    left: $sidebar-width - $sidebar-toggle-inset;
 
     img {
       transform: rotate(0deg);

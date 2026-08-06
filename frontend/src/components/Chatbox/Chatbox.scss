@@ -17,7 +17,7 @@
   min-width: 0;
 
   &.open {
-    width: 250px;
+    width: $sidebar-width;
     overflow-y: auto;
   }
 
@@ -88,7 +88,7 @@
   }
 
   &.open {
-    right: 220px;
+    right: $sidebar-width - $sidebar-toggle-inset;
 
     img {
       transform: rotate(0deg);

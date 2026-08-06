@@ -38,19 +38,19 @@
   margin-right: 0; /* No dead space when collapsed */
 
   &.expanded-left {
-    margin-left: 250px; /* When menu opens */
-    width: calc(100vw - 250px);
+    margin-left: $sidebar-width; /* When menu opens */
+    width: calc(100vw - #{$sidebar-width});
   }
 
   &.expanded-right {
-    margin-right: 250px; /* When chatbox opens */
-    width: calc(100vw - 250px);
+    margin-right: $sidebar-width; /* When chatbox opens */
+    width: calc(100vw - #{$sidebar-width});
   }
 
   &.expanded-both {
-    margin-left: 250px;
-    margin-right: 250px;
-    width: calc(100vw - 500px);
+    margin-left: $sidebar-width;
+    margin-right: $sidebar-width;
+    width: calc(100vw - #{$sidebar-width * 2});
   }
 }
 
