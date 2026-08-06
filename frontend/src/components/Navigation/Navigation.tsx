@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaUserCircle } from "react-icons/fa";
-import Logo from "../../assets/cinezoo_logo_neon_7.svg";
+import Logo from "../../assets/cinezoo_logo_redpanda.svg";
 import "./Navigation.scss";
 import ArrowUp from "../../assets/nav/nav_arrow_up.svg"
 import ArrowDown from "../../assets/nav/nav_arrow_down.svg"
